@@ -1,0 +1,521 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Off-Grid Solar Simulator · NLR NSRDB</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  :root {
+    --sun:#F5A623; --night:#0D1B2A; --dusk:#1E3A5F;
+    --good:#27AE60; --warn:#E67E22; --bad:#C0392B; --white:#FFFFFF;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--night);color:var(--white);min-height:100vh;}
+
+  header{background:linear-gradient(135deg,var(--night),var(--dusk));border-bottom:1px solid rgba(245,166,35,.25);padding:22px 32px;display:flex;align-items:center;gap:16px;}
+  .sun-icon{width:40px;height:40px;background:var(--sun);border-radius:50%;box-shadow:0 0 0 7px rgba(245,166,35,.15),0 0 0 14px rgba(245,166,35,.06);flex-shrink:0;}
+  header h1{font-size:20px;font-weight:700;letter-spacing:-.3px;}
+  header p{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px;}
+  .badge{margin-left:auto;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--sun);font-weight:600;white-space:nowrap;}
+
+  .app{max-width:920px;margin:0 auto;padding:28px 18px 60px;}
+  .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:26px;margin-bottom:18px;}
+  .card-title{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--sun);margin-bottom:18px;}
+
+  .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+  @media(max-width:580px){.fields{grid-template-columns:1fr;}}
+  .field{display:flex;flex-direction:column;gap:5px;}
+  .field label{font-size:12px;color:rgba(255,255,255,.6);font-weight:500;}
+  .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:13px;transition:border-color .2s;outline:none;width:100%;}
+  .field input:focus,.field select:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
+  .field select option{background:#1E3A5F;}
+  .field .hint{font-size:11px;color:rgba(255,255,255,.3);}
+
+  .sys-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+  @media(max-width:560px){.sys-grid{grid-template-columns:repeat(2,1fr);}}
+  .sys-opt{border:1.5px solid rgba(255,255,255,.12);border-radius:12px;padding:13px 8px;text-align:center;transition:all .18s;background:rgba(255,255,255,.04);user-select:none;}
+  .sys-opt.clickable{cursor:pointer;}
+  .sys-opt.clickable:hover{border-color:var(--sun);background:rgba(245,166,35,.07);}
+  .sys-opt.active{border-color:var(--sun);background:rgba(245,166,35,.14);}
+  .sys-tag{font-size:10px;color:rgba(255,255,255,.45);margin-bottom:4px;}
+  .sys-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--sun);}
+  .sys-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;}
+  .sys-note{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;line-height:1.6;}
+
+  .btn-run{width:100%;margin-top:6px;padding:14px;background:var(--sun);color:var(--night);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;}
+  .btn-run:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
+  .btn-run:disabled{opacity:.4;cursor:not-allowed;}
+
+  #status{display:none;text-align:center;padding:16px;font-size:13px;color:rgba(255,255,255,.5);}
+  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+  @keyframes spin{to{transform:rotate(360deg);}}
+  #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:13px;color:#E74C3C;margin-top:10px;line-height:1.6;}
+  #results{display:none;}
+
+  .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:18px;}
+  @media(max-width:500px){.score-grid{grid-template-columns:1fr 1fr;}}
+  .score-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:16px 12px;text-align:center;}
+  .score-box.hl{border-color:var(--sun);background:rgba(245,166,35,.1);}
+  .sc-num{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;line-height:1;}
+  .sc-unit{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px;}
+  .sc-label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-top:7px;}
+  .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);} .cs{color:var(--sun);}
+
+  .cal-wrap{overflow-x:auto;}
+  .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
+  .cal-hdr{font-size:8px;color:rgba(255,255,255,.28);text-align:center;padding:2px 0;}
+  .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.38);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+  .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
+  .cal-cell.met{background:var(--good);opacity:.82;}
+  .cal-cell.partial{background:var(--warn);opacity:.82;}
+  .cal-cell.fail{background:var(--bad);opacity:.72;}
+  .cal-cell.empty{background:transparent;}
+  .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
+  .cal-legend span{font-size:11px;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:5px;}
+  .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
+  .leg-met::before{background:var(--good);} .leg-part::before{background:var(--warn);} .leg-fail::before{background:var(--bad);}
+
+  .mtbl{width:100%;border-collapse:collapse;font-size:13px;}
+  .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
+  .mtbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);}
+  .mtbl tr:last-child td{border-bottom:none;}
+  .mtbl tr[data-idx]{cursor:pointer;}
+  .mtbl tr[data-idx]:hover{background:rgba(255,255,255,.03);}
+  .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
+  .bar-wrap{width:100%;background:rgba(255,255,255,.07);border-radius:4px;height:6px;overflow:hidden;}
+  .bar-fill{height:100%;border-radius:4px;}
+  .src-note{font-size:11px;color:rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
+  .cmp-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:10px;}
+</style>
+</head>
+<body>
+<header>
+  <div class="sun-icon"></div>
+  <div>
+    <h1>Off-Grid Solar Simulator</h1>
+    <p>Hourly GHI from NLR NSRDB · auto-discovered dataset &amp; year</p>
+  </div>
+  <div class="badge">NLR NSRDB</div>
+</header>
+
+<div class="app">
+
+  <div class="card">
+    <div class="card-title">📍 Location</div>
+    <div class="fields">
+      <div class="field">
+        <label>Latitude</label>
+        <input type="number" id="lat" value="39.74" step="0.01" min="-90" max="90">
+        <span class="hint">e.g. 39.74 = Denver, CO</span>
+      </div>
+      <div class="field">
+        <label>Longitude</label>
+        <input type="number" id="lon" value="-104.98" step="0.01" min="-180" max="180">
+        <span class="hint">e.g. -104.98 = Denver, CO</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">⚡ Your Energy Load</div>
+    <div class="fields">
+      <div class="field">
+        <label>Daytime energy need (Wh)</label>
+        <input type="number" id="day-load" value="500" min="0" step="10">
+        <span class="hint">Served directly from panels</span>
+      </div>
+      <div class="field">
+        <label>Night-time energy need (Wh)</label>
+        <input type="number" id="night-load" value="300" min="0" step="10">
+        <span class="hint">Drawn from battery after sunset</span>
+      </div>
+      <div class="field">
+        <label>Peak / max power (W)</label>
+        <input type="number" id="peak-power" value="400" min="0" step="10">
+        <span class="hint">Highest instantaneous draw</span>
+      </div>
+      <div class="field">
+        <label>Your email (required by NLR)</label>
+        <input type="email" id="email" value="plilient@gmail.com">
+        <span class="hint">Sent to NLR with the API request</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">🔆 System Configurations</div>
+    <p class="sys-note">Every run tests all four panel/battery combinations at once, so you can compare them directly. 350 W panels · 1 kWh LiFePO₄ batteries per unit.</p>
+    <div class="sys-grid">
+      <div class="sys-opt"><div class="sys-tag">Panels × Batteries</div><div class="sys-val">1 × 1</div><div class="sys-sub">350 W · 1 kWh</div></div>
+      <div class="sys-opt"><div class="sys-tag">Panels × Batteries</div><div class="sys-val">1 × 2</div><div class="sys-sub">350 W · 2 kWh</div></div>
+      <div class="sys-opt"><div class="sys-tag">Panels × Batteries</div><div class="sys-val">2 × 1</div><div class="sys-sub">700 W · 1 kWh</div></div>
+      <div class="sys-opt"><div class="sys-tag">Panels × Batteries</div><div class="sys-val">2 × 2</div><div class="sys-sub">700 W · 2 kWh</div></div>
+    </div>
+  </div>
+
+  <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
+  <div id="status"></div>
+  <div id="error-msg"></div>
+
+  <div id="results">
+    <div class="card">
+      <div class="card-title">⚖️ Configuration Comparison</div>
+      <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
+      <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
+      <div class="score-grid" id="score-grid"></div>
+      <div class="src-note" id="src-note"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">📅 Day-by-Day Calendar</div>
+      <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
+      <div class="cal-legend">
+        <span class="leg-met">Full load met</span>
+        <span class="leg-part">Partial (≥60%)</span>
+        <span class="leg-fail">Significant shortfall</span>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">📆 Monthly Breakdown</div>
+      <div style="overflow-x:auto"><table class="mtbl" id="mtbl"></table></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🔍 Verdict</div>
+      <p id="verdict" style="font-size:14px;line-height:1.75;color:rgba(255,255,255,.75);"></p>
+    </div>
+  </div>
+</div>
+
+<script>
+const API_KEY = 'miJdkoFdKvj0XLnEyfSa9bcnHpRBv81IcDLCph6M';
+const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+const CONFIGS = [{p:1,b:1},{p:1,b:2},{p:2,b:1},{p:2,b:2}];
+
+let allRuns = null;      // [{p,b,results,summary}, ...] populated after a run
+let activeCfgIdx = 3;    // which config's detail view is showing (default 2x2)
+
+const setSt=(msg)=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`<span class="spinner"></span>${msg}`:'';}
+const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
+
+const PROXY_DOWN_MSG = 'Could not reach the local proxy. Make sure nlr_proxy.py is running:\n\n    python nlr_proxy.py';
+
+/* ── Discover which dataset/year covers this location ── */
+async function discoverDataset(lat, lon) {
+  const params = new URLSearchParams({
+    wkt: `POINT(${lon} ${lat})`,
+    api_key: API_KEY
+  });
+  const nlrUrl = `https://developer.nlr.gov/api/solar/nsrdb_data_query.json?${params}`;
+  const proxyUrl = `http://localhost:8765/proxy?url=${encodeURIComponent(nlrUrl)}`;
+
+  let resp, json;
+  try {
+    resp = await fetch(proxyUrl);
+    json = await resp.json();
+  } catch(e) {
+    throw new Error(PROXY_DOWN_MSG);
+  }
+  if (json.errors && json.errors.length) throw new Error(json.errors.join(', '));
+
+  // The API doesn't expose a reliable "satellite vs station" type field, so
+  // prefer the GOES Aggregated dataset (broadest year coverage) by name.
+  const outputs = json.outputs || [];
+  const ds = outputs.find(o => /goes-aggregated-v4/i.test(o.name)) || outputs[0];
+  if (!ds) throw new Error('No NSRDB dataset covers this location. NSRDB covers the Americas, Europe, and Africa (roughly ±60° latitude).');
+
+  const years = (ds.availableYears || []).filter(y => y !== 'tmy').map(Number).filter(y => !isNaN(y));
+  if (!years.length) throw new Error(`No yearly (non-TMY) data available for "${ds.displayName || ds.name}" at this location.`);
+  const year = Math.max(...years);
+
+  const intervals = ds.availableIntervals && ds.availableIntervals.length ? ds.availableIntervals : [60];
+  const interval = intervals.includes(60) ? 60 : intervals[0];
+
+  return { datasetName: ds.name, displayName: ds.displayName || ds.name, year, interval };
+}
+
+/* ── Parse NSRDB CSV ── */
+function parseNSRDB(text) {
+  if(text.trim().startsWith('{')) {
+    let j; try{j=JSON.parse(text);}catch(_){}
+    throw new Error((j&&(j.errors||[]).join(', ')) || 'NLR returned an error response');
+  }
+  const lines = text.split('\n').filter(l=>l.trim());
+  if(lines.length<5) throw new Error('Response too short — check coordinates');
+
+  // Detect format: NSRDB PSM3/PSM4 has 2 metadata rows then column header row then data
+  // Row 0: key names (Source, Location ID, City, State, Country, Latitude, Longitude, ...)
+  // Row 1: key values
+  // Row 2: data column headers (Year, Month, Day, Hour, Minute, GHI, ...)
+  // Row 3+: data
+
+  let metaKeys=[], metaVals=[], colRow=2, dataStart=3;
+  // Check if row 0 starts with "Source"
+  if(lines[0].split(',')[0].trim()==='Source') {
+    metaKeys = lines[0].split(',').map(s=>s.trim());
+    metaVals = lines[1].split(',').map(s=>s.trim());
+    colRow=2; dataStart=3;
+  } else {
+    // single metadata row or different format — try row 1 as column header
+    colRow=1; dataStart=2;
+  }
+
+  const colNames = lines[colRow].split(',').map(s=>s.trim().toLowerCase());
+  const ghiIdx   = colNames.indexOf('ghi');
+  if(ghiIdx<0) throw new Error(`GHI column not found. Columns: ${colNames.join(', ')}`);
+
+  const hourly = [];
+  for(let i=dataStart;i<lines.length;i++){
+    const cols=lines[i].split(',');
+    if(cols.length<=ghiIdx) continue;
+    const ghi=parseFloat(cols[ghiIdx]);
+    hourly.push(isNaN(ghi)||ghi<0?0:ghi);
+  }
+
+  // Build metadata string
+  let meta=`Lat ${metaVals[metaKeys.indexOf('Latitude')]||'?'}, `+
+           `Lon ${metaVals[metaKeys.indexOf('Longitude')]||'?'}`;
+  const city  = metaVals[metaKeys.indexOf('City')];
+  const state = metaVals[metaKeys.indexOf('State')];
+  const elev  = metaVals[metaKeys.indexOf('Elevation')];
+  if(city&&city!=='-') meta=`${city}${state&&state!=='-'?', '+state:''} · `+meta;
+  if(elev) meta+=` · Elev ${elev} m`;
+
+  return {hourly, meta};
+}
+
+/* ── Fetch hourly GHI for the discovered dataset/year ── */
+async function fetchNLR(lat, lon, email, datasetName, year, interval) {
+  const params = new URLSearchParams({
+    wkt:          `POINT(${lon} ${lat})`,
+    names:        year,
+    leap_day:     'true',
+    interval:     String(interval),
+    utc:          'false',
+    full_name:    'Solar+Simulator+User',
+    email:        email,
+    affiliation:  'Personal',
+    mailing_list: 'false',
+    reason:       'Off-grid+solar+simulation',
+    api_key:      API_KEY,
+    attributes:   'ghi'
+  });
+
+  // Build the NLR target URL, then wrap it through the local CORS proxy
+  const nlrUrl = `https://developer.nlr.gov/api/nsrdb/v2/solar/${datasetName}-download.csv?${params}`;
+  const proxyUrl = `http://localhost:8765/proxy?url=${encodeURIComponent(nlrUrl)}`;
+
+  let resp, text;
+  try {
+    resp = await fetch(proxyUrl);
+    text = await resp.text();
+  } catch(e) {
+    throw new Error(PROXY_DOWN_MSG);
+  }
+
+  if(!resp.ok && !text.trim().startsWith('{'))
+    throw new Error(`Proxy returned HTTP ${resp.status}: ${text.slice(0,200)}`);
+
+  return parseNSRDB(text);
+}
+
+/* ── Simulate ── */
+function simulate(hourly, dayWh, nightWh, numP, numB, year){
+  const Wp     = numP*350;
+  const capWh  = numB*1000;
+  const minWh  = capWh*0.10;
+  const cEff   = Math.sqrt(0.95);
+  const dEff   = Math.sqrt(0.95);
+  const pEff   = 0.80;
+  let   batWh  = capWh*0.5;
+
+  const isLeap=year%4===0;
+  const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
+  const results=[];
+  let hIdx=0;
+
+  for(let m=0;m<12;m++){
+    for(let d=0;d<dim[m];d++){
+      const hrs=[];
+      for(let h=0;h<24&&hIdx<hourly.length;h++,hIdx++) hrs.push({h,ghi:hourly[hIdx]});
+
+      const nSolar=Math.max(hrs.filter(h=>h.ghi>5).length,1);
+      const nNight=Math.max(hrs.filter(h=>h.ghi<=5).length,1);
+      let dRem=dayWh,nRem=nightWh,dSrv=0,nSrv=0;
+
+      for(const hr of hrs){
+        const gen=(hr.ghi/1000)*Wp*pEff;
+        if(hr.ghi>5){
+          const need=Math.min(dayWh/nSolar,dRem);
+          const fg=Math.min(gen,need);
+          dSrv+=fg; dRem-=fg;
+          const still=need-fg;
+          if(still>0){const avail=(batWh-minWh)*dEff;const dd=Math.min(still,avail);dSrv+=dd;dRem-=dd;batWh-=dd/dEff;}
+          const surplus=gen-fg;
+          if(surplus>0){const sp=capWh-batWh;batWh+=Math.min(surplus*cEff,sp);}
+        } else {
+          const need=Math.min(nightWh/nNight,nRem);
+          const avail=(batWh-minWh)*dEff;const dd=Math.min(need,avail);
+          nSrv+=dd;nRem-=dd;batWh-=dd/dEff;
+        }
+      }
+
+      const tot=dayWh+nightWh;
+      const met=Math.min(dSrv,dayWh)+Math.min(nSrv,nightWh);
+      const frac=tot>0?Math.min(1,met/tot):1;
+      results.push({m,d,frac,met:frac>=0.99,partial:frac>=0.60&&frac<0.99,fail:frac<0.60});
+    }
+  }
+  return results;
+}
+
+function summarize(results){
+  const total=results.length;
+  const met=results.filter(r=>r.met).length;
+  const partial=results.filter(r=>r.partial).length;
+  const fail=results.filter(r=>r.fail).length;
+  return {total,met,partial,fail,pct:Math.round(met/total*100)};
+}
+
+/* ── Render: comparison table across all 4 configs ── */
+function renderComparison(){
+  const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
+  const tbl = document.getElementById('cmp-tbl');
+  tbl.innerHTML = `<thead><tr><th>Config</th><th>Panels</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Success rate</th></tr></thead><tbody>`+
+    allRuns.map((run,i)=>{
+      const s=run.summary;
+      const bc=s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
+      const star = run===best ? ' ★' : '';
+      const activeCls = i===activeCfgIdx ? ' active-row' : '';
+      return `<tr data-idx="${i}" class="${activeCls}">
+        <td style="font-family:'Space Mono',monospace">${run.p}×${run.b}${star}</td>
+        <td style="font-family:'Space Mono',monospace">${run.p*350} W</td>
+        <td style="font-family:'Space Mono',monospace">${run.b} kWh</td>
+        <td class="cg">${s.met}</td>
+        <td class="cw">${s.partial}</td>
+        <td class="cb">${s.fail}</td>
+        <td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${s.pct}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${s.pct}%</span></div></td>
+      </tr>`;
+    }).join('') + '</tbody>';
+
+  tbl.querySelectorAll('tr[data-idx]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      activeCfgIdx = +row.dataset.idx;
+      renderComparison();
+      renderDetail();
+    });
+  });
+}
+
+/* ── Render: detail view for the selected config ── */
+function renderDetail(){
+  const run = allRuns[activeCfgIdx];
+  const {p:numP, b:numB, results, year, meta} = run;
+  const isLeap=year%4===0;
+  const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
+  const s = summarize(results);
+  const Wp=numP*350;
+  const col=s.pct>=80?'cg':s.pct>=50?'cw':'cb';
+
+  document.getElementById('detail-label').textContent = `${numP}×${numB} (${Wp} W · ${numB} kWh)`;
+
+  document.getElementById('score-grid').innerHTML=`
+    <div class="score-box hl"><div class="sc-num ${col}">${s.pct}%</div><div class="sc-unit">of days</div><div class="sc-label">Load fully met</div></div>
+    <div class="score-box"><div class="sc-num cg">${s.met}</div><div class="sc-unit">days</div><div class="sc-label">Full success</div></div>
+    <div class="score-box"><div class="sc-num cw">${s.partial}</div><div class="sc-unit">days</div><div class="sc-label">Partial supply</div></div>
+    <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Significant shortfall</div></div>
+    <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">${numP}× 350W panel</div></div>
+    <div class="score-box"><div class="sc-num cs">${numB}</div><div class="sc-unit">kWh storage</div><div class="sc-label">${numB}× 1 kWh battery</div></div>`;
+  document.getElementById('src-note').innerHTML=`<strong style="color:var(--sun)">Data:</strong> ${run.datasetLabel} · ${year} · ${run.interval}-min GHI · ${meta}`;
+
+  // Calendar
+  const cal=document.getElementById('cal-grid'); cal.innerHTML='';
+  const mkDiv=(cls,txt,title)=>{const d=document.createElement('div');d.className=cls;if(txt)d.textContent=txt;if(title)d.title=title;return d;};
+  cal.appendChild(mkDiv('cal-hdr'));
+  for(let d=1;d<=31;d++) cal.appendChild(mkDiv('cal-hdr',d));
+  let ri=0;
+  for(let m=0;m<12;m++){
+    cal.appendChild(mkDiv('cal-row-lbl',MONTHS[m]));
+    for(let d=0;d<31;d++){
+      if(d<dim[m]){
+        const r=results[ri++];
+        cal.appendChild(mkDiv('cal-cell '+(r.met?'met':r.partial?'partial':'fail'),'',`${MONTHS[m]} ${d+1}: ${Math.round(r.frac*100)}% met`));
+      } else cal.appendChild(mkDiv('cal-cell empty'));
+    }
+  }
+
+  // Monthly table
+  const md=[];let ri2=0;
+  for(let m=0;m<12;m++){const sl=results.slice(ri2,ri2+dim[m]);ri2+=dim[m];md.push({m,days:dim[m],met:sl.filter(r=>r.met).length,part:sl.filter(r=>r.partial).length,fail:sl.filter(r=>r.fail).length});}
+  document.getElementById('mtbl').innerHTML=`<thead><tr><th>Month</th><th>Days</th><th>Full</th><th>Partial</th><th>Failed</th><th>Success rate</th></tr></thead><tbody>`+
+    md.map(mo=>{const pc=Math.round(mo.met/mo.days*100);const bc=pc>=80?'var(--good)':pc>=50?'var(--warn)':'var(--bad)';return`<tr><td>${MONTHS[mo.m]}</td><td style="font-family:'Space Mono',monospace">${mo.days}</td><td class="cg">${mo.met}</td><td class="cw">${mo.part}</td><td class="cb">${mo.fail}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${pc}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${pc}%</span></div></td></tr>`;}).join('')+'</tbody>';
+
+  // Verdict
+  const worst=md.reduce((a,b)=>a.met/a.days<b.met/b.days?a:b);
+  const best =md.reduce((a,b)=>a.met/a.days>b.met/b.days?a:b);
+  const dayWh = run.dayWh, nightWh = run.nightWh, peakW = run.peakW;
+  const kwh=(dayWh+nightWh)/1000;
+  let v=s.pct>=95?`✅ Excellent — ${numP}×350 W / ${numB} kWh fully covers your ${kwh.toFixed(1)} kWh/day on ${s.pct}% of days.`
+     :s.pct>=80?`🟡 Good — ${s.fail} days/year see shortfalls, mostly in ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%). One more panel or battery would push past 95%.`
+     :s.pct>=50?`⚠️ Marginal — only ${s.pct}% of days fully covered. Your ${kwh.toFixed(1)} kWh/day load is large for ${Wp} W of panels. Consider upgrading.`
+     :`❌ Undersized — ${s.pct}% success. Try a larger config or reduce your load.`;
+  if(peakW>Wp) v+=` ⚠️ Peak demand (${peakW} W) exceeds panel output (${Wp} W) — battery buffers instantaneous peaks.`;
+  v+=` Best: ${MONTHS[best.m]} (${Math.round(best.met/best.days*100)}%). Worst: ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%).`;
+  document.getElementById('verdict').textContent=v;
+}
+
+/* ── Main ── */
+document.getElementById('btn-run').addEventListener('click',async()=>{
+  setErr(''); document.getElementById('results').style.display='none';
+  const lat=parseFloat(document.getElementById('lat').value);
+  const lon=parseFloat(document.getElementById('lon').value);
+  const dayWh=parseFloat(document.getElementById('day-load').value);
+  const nightWh=parseFloat(document.getElementById('night-load').value);
+  const peakW=parseFloat(document.getElementById('peak-power').value);
+  const email=document.getElementById('email').value.trim();
+  if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)||isNaN(peakW)){setErr('Please fill in all numeric fields.');return;}
+  if(!email.includes('@')){setErr('Please enter a valid email (required by NLR for API access).');return;}
+  if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
+
+  const btn=document.getElementById('btn-run'); btn.disabled=true;
+  try{
+    setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
+    const {datasetName, displayName, year, interval} = await discoverDataset(lat, lon);
+
+    setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
+    const {hourly,meta} = await fetchNLR(lat, lon, email, datasetName, year, interval);
+    if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
+
+    setSt(`Received ${hourly.length} hourly GHI readings. Simulating all 4 configurations…`);
+    await new Promise(r=>setTimeout(r,40));
+
+    allRuns = CONFIGS.map(cfg=>{
+      const results = simulate(hourly, dayWh, nightWh, cfg.p, cfg.b, year);
+      return {
+        p:cfg.p, b:cfg.b, results, summary:summarize(results),
+        year, meta, dayWh, nightWh, peakW,
+        datasetLabel: displayName, interval
+      };
+    });
+    // default detail view to the best-performing config
+    activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> run.summary.pct>arr[bi].summary.pct?i:bi, 0);
+
+    setSt('');
+    document.getElementById('results').style.display='block';
+    renderComparison();
+    renderDetail();
+    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+  }catch(err){
+    setSt('');
+    setErr(`<strong>Error:</strong> ${err.message}<br><br>
+      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
+      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
+      NLR servers busy; invalid API key.`);
+    console.error(err);
+  }finally{btn.disabled=false;}
+});
+</script>
+</body>
+</html>
