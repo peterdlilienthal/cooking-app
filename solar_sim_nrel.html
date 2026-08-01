@@ -86,6 +86,8 @@
   .bar-wrap{width:100%;background:rgba(255,255,255,.07);border-radius:4px;height:6px;overflow:hidden;}
   .bar-fill{height:100%;border-radius:4px;}
   .src-note{font-size:11px;color:rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
+  .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
+  .csv-btn:hover{background:rgba(245,166,35,.22);}
   .cmp-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:10px;}
 </style>
 </head>
@@ -375,6 +377,7 @@ function simulate(hourly, dayWh, nightWh, numP, numB, year, panelW, battWh){
   const isLeap=year%4===0;
   const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
   const results=[];
+  const hourlyLog=[];
   let hIdx=0;
 
   for(let m=0;m<12;m++){
@@ -388,19 +391,21 @@ function simulate(hourly, dayWh, nightWh, numP, numB, year, panelW, battWh){
 
       for(const hr of hrs){
         const gen=(hr.ghi/1000)*Wp*pEff;
+        let need, batCharge=0, batDischarge=0;
         if(hr.ghi>5){
-          const need=Math.min(dayWh/nSolar,dRem);
+          need=Math.min(dayWh/nSolar,dRem);
           const fg=Math.min(gen,need);
           dSrv+=fg; dRem-=fg;
           const still=need-fg;
-          if(still>0){const avail=(batWh-minWh)*dEff;const dd=Math.min(still,avail);dSrv+=dd;dRem-=dd;batWh-=dd/dEff;}
+          if(still>0){const avail=(batWh-minWh)*dEff;const dd=Math.min(still,avail);dSrv+=dd;dRem-=dd;batWh-=dd/dEff;batDischarge=dd;}
           const surplus=gen-fg;
-          if(surplus>0){const sp=capWh-batWh;batWh+=Math.min(surplus*cEff,sp);}
+          if(surplus>0){const sp=capWh-batWh;const chg=Math.min(surplus*cEff,sp);batWh+=chg;batCharge=chg;}
         } else {
-          const need=Math.min(nightWh/nNight,nRem);
+          need=Math.min(nightWh/nNight,nRem);
           const avail=(batWh-minWh)*dEff;const dd=Math.min(need,avail);
-          nSrv+=dd;nRem-=dd;batWh-=dd/dEff;
+          nSrv+=dd;nRem-=dd;batWh-=dd/dEff;batDischarge=dd;
         }
+        hourlyLog.push({month:m+1,day:d+1,hour:hr.h,ghi:hr.ghi,pv:gen,batCharge,batDischarge,load:need,batSoc:batWh});
       }
 
       const tot=dayWh+nightWh;
@@ -409,7 +414,7 @@ function simulate(hourly, dayWh, nightWh, numP, numB, year, panelW, battWh){
       results.push({m,d,frac,met:frac>=0.99,partial:frac>=0.60&&frac<0.99,fail:frac<0.60});
     }
   }
-  return results;
+  return {results, hourlyLog};
 }
 
 function summarize(results){
@@ -420,11 +425,27 @@ function summarize(results){
   return {total,met,partial,fail,notMet:partial+fail,pct:Math.round(met/total*100)};
 }
 
+/* ── Export hourly detail for one config as a CSV download ── */
+function exportHourlyCSV(run){
+  const header='Month,Day,Hour,GHI (W/m2),PV Output (Wh),Battery Charge (Wh),Battery Discharge (Wh),Load (Wh),Battery SOC (Wh)';
+  const rows=run.hourlyLog.map(r=>[r.month,r.day,r.hour,r.ghi.toFixed(1),r.pv.toFixed(1),r.batCharge.toFixed(1),r.batDischarge.toFixed(1),r.load.toFixed(1),r.batSoc.toFixed(1)].join(','));
+  const csv=header+'\n'+rows.join('\n');
+  const blob=new Blob([csv],{type:'text/csv;charset=utf-8;'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');
+  a.href=url;
+  a.download=`solar_sim_${run.p}x${run.b}_${run.year}.csv`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>Config</th><th>Panels</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Not met</th><th>Success rate</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Config</th><th>Panels</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const s=run.summary;
       const bc=s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
@@ -439,6 +460,7 @@ function renderComparison(){
         <td class="cb">${s.fail}</td>
         <td class="cb" style="font-weight:700">${s.notMet}</td>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${s.pct}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${s.pct}%</span></div></td>
+        <td><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button></td>
       </tr>`;
     }).join('') + '</tbody>';
 
@@ -447,6 +469,12 @@ function renderComparison(){
       activeCfgIdx = +row.dataset.idx;
       renderComparison();
       renderDetail();
+    });
+  });
+  tbl.querySelectorAll('.csv-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      exportHourlyCSV(allRuns[+btn.dataset.idx]);
     });
   });
 }
@@ -547,9 +575,9 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
-      const results = simulate(hourly, dayWh, nightWh, cfg.p, cfg.b, year, panelW, battKwh*1000);
+      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, cfg.p, cfg.b, year, panelW, battKwh*1000);
       return {
-        p:cfg.p, b:cfg.b, results, summary:summarize(results),
+        p:cfg.p, b:cfg.b, results, hourlyLog, summary:summarize(results),
         year, meta, dayWh, nightWh, peakW,
         datasetLabel: displayName, interval, panelW, battKwh
       };
