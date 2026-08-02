@@ -133,11 +133,6 @@
         <span class="hint">Drawn from battery after sunset</span>
       </div>
       <div class="field">
-        <label>Peak / max power (W)</label>
-        <input type="number" id="peak-power" value="400" min="0" step="10">
-        <span class="hint">Highest instantaneous draw</span>
-      </div>
-      <div class="field">
         <label>Your email (required by NLR)</label>
         <input type="email" id="email" value="plilient@gmail.com">
         <span class="hint">Sent to NLR with the API request</span>
@@ -526,13 +521,12 @@ function renderDetail(){
   // Verdict
   const worst=md.reduce((a,b)=>a.met/a.days<b.met/b.days?a:b);
   const best =md.reduce((a,b)=>a.met/a.days>b.met/b.days?a:b);
-  const dayWh = run.dayWh, nightWh = run.nightWh, peakW = run.peakW;
+  const dayWh = run.dayWh, nightWh = run.nightWh;
   const kwh=(dayWh+nightWh)/1000;
   let v=s.pct>=95?`✅ Excellent — ${Wp} W / ${kWhTotal} kWh fully covers your ${kwh.toFixed(1)} kWh/day on ${s.pct}% of days.`
      :s.pct>=80?`🟡 Good — ${s.fail} days/year see shortfalls, mostly in ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%). One more panel or battery would push past 95%.`
      :s.pct>=50?`⚠️ Marginal — only ${s.pct}% of days fully covered. Your ${kwh.toFixed(1)} kWh/day load is large for ${Wp} W of panels. Consider upgrading.`
      :`❌ Undersized — ${s.pct}% success. Try a larger config or reduce your load.`;
-  if(peakW>Wp) v+=` ⚠️ Peak demand (${peakW} W) exceeds panel output (${Wp} W) — battery buffers instantaneous peaks.`;
   v+=` Best: ${MONTHS[best.m]} (${Math.round(best.met/best.days*100)}%). Worst: ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%).`;
   document.getElementById('verdict').textContent=v;
 }
@@ -544,11 +538,10 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
   const lon=parseFloat(document.getElementById('lon').value);
   const dayWh=parseFloat(document.getElementById('day-load').value);
   const nightWh=parseFloat(document.getElementById('night-load').value);
-  const peakW=parseFloat(document.getElementById('peak-power').value);
   const email=document.getElementById('email').value.trim();
   const panelW=parseFloat(document.getElementById('panel-w').value);
   const battKwh=parseFloat(document.getElementById('batt-kwh').value);
-  if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)||isNaN(peakW)){setErr('Please fill in all numeric fields.');return;}
+  if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
   if(!email.includes('@')){setErr('Please enter a valid email (required by NLR for API access).');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
   if(isNaN(panelW)||panelW<=0){setErr('Panel size (W) must be a positive number.');return;}
@@ -578,7 +571,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
       const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, cfg.p, cfg.b, year, panelW, battKwh*1000);
       return {
         p:cfg.p, b:cfg.b, results, hourlyLog, summary:summarize(results),
-        year, meta, dayWh, nightWh, peakW,
+        year, meta, dayWh, nightWh,
         datasetLabel: displayName, interval, panelW, battKwh
       };
     });
