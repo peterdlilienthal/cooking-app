@@ -125,6 +125,18 @@
         <span class="hint">e.g. -104.98 = Denver, CO</span>
       </div>
     </div>
+    <div id="map-wrap" style="position:relative;overflow:hidden;border-radius:10px;border:1px solid rgba(255,255,255,.12);height:320px;cursor:crosshair;user-select:none;margin-top:16px;">
+      <div id="map-tiles" style="position:absolute;left:0;top:0;"></div>
+      <div id="map-marker" style="position:absolute;width:16px;height:16px;margin:-16px 0 0 -8px;border-radius:50% 50% 50% 0;background:var(--sun);transform:rotate(-45deg);box-shadow:0 0 0 2px rgba(13,27,42,.6);display:none;pointer-events:none;"></div>
+    </div>
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+      <p class="cmp-hint" style="margin:0;">Click the map to set lat/long. Drag to pan, scroll (or +/−) to zoom.</p>
+      <div style="display:flex;gap:6px;">
+        <button class="csv-btn" id="map-zoom-out" type="button">−</button>
+        <button class="csv-btn" id="map-zoom-in" type="button">+</button>
+      </div>
+    </div>
+    <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
   </div>
 
   <div class="card">
@@ -176,12 +188,12 @@
       </div>
       <div class="field">
         <label>$ per kWh (battery)</label>
-        <input type="number" id="cost-batt-kwh" value="400" min="0" step="1">
+        <input type="number" id="cost-batt-kwh" value="200" min="0" step="1">
         <span class="hint">Cost per kWh of battery capacity</span>
       </div>
       <div class="field">
         <label>Inverter, controls &amp; misc ($)</label>
-        <input type="number" id="cost-fixed" value="500" min="0" step="10">
+        <input type="number" id="cost-fixed" value="50" min="0" step="10">
         <span class="hint">Flat cost, same across all configs</span>
       </div>
     </div>
@@ -193,9 +205,12 @@
 
   <div id="results">
     <div class="card">
-      <div class="card-title">⚖️ Configuration Comparison</div>
-      <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
-      <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📈 Cost vs. Not-Met Days</span>
+        <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+      </div>
+      <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report packs your inputs and this chart onto one page.</p>
     </div>
     <div class="card">
       <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
@@ -208,12 +223,9 @@
       <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
-        <span>📈 Cost vs. Not-Met Days</span>
-        <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
-      </div>
-      <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report packs your inputs and this chart onto one page.</p>
+      <div class="card-title">⚖️ Configuration Comparison</div>
+      <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
+      <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
     </div>
     <div class="card">
       <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
@@ -246,6 +258,126 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 let allRuns = null;      // [{p,b,results,summary}, ...] populated after a run
 let activeCfgIdx = 0;    // which config's detail view is showing (defaults to best after a run)
+let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,interval} for the last-fetched location — avoids re-hitting NLR when only load/PV/battery/cost inputs change
+
+/* ── Clickable map: plain OSM raster tiles + hand-rolled Web Mercator slippy-map math (no map library) ── */
+const TILE_SIZE = 256;
+let mapZoom = 2;
+let mapCenter = {
+  lat: parseFloat(document.getElementById('lat').value) || 20,
+  lon: parseFloat(document.getElementById('lon').value) || 0
+};
+
+function lonLatToWorldPx(lon, lat, zoom){
+  const scale = TILE_SIZE * Math.pow(2, zoom);
+  const x = (lon + 180) / 360 * scale;
+  const sinLat = Math.sin(lat * Math.PI / 180);
+  const y = (0.5 - Math.log((1 + sinLat) / (1 - sinLat)) / (4 * Math.PI)) * scale;
+  return {x, y};
+}
+function worldPxToLonLat(x, y, zoom){
+  const scale = TILE_SIZE * Math.pow(2, zoom);
+  const lon = x / scale * 360 - 180;
+  const n = Math.PI - 2 * Math.PI * y / scale;
+  const lat = 180 / Math.PI * Math.atan(0.5 * (Math.exp(n) - Math.exp(-n)));
+  return {lat, lon};
+}
+const clampLat = lat => Math.max(-85, Math.min(85, lat));
+const normLon  = lon => ((lon + 180) % 360 + 360) % 360 - 180;
+
+function renderMap(){
+  const wrap = document.getElementById('map-wrap');
+  const tilesEl = document.getElementById('map-tiles');
+  const W = wrap.clientWidth, H = wrap.clientHeight;
+  if(!W || !H) return;
+  const centerPx = lonLatToWorldPx(mapCenter.lon, mapCenter.lat, mapZoom);
+  const originX = centerPx.x - W / 2, originY = centerPx.y - H / 2;
+
+  const firstTileX = Math.floor(originX / TILE_SIZE), lastTileX = Math.floor((originX + W) / TILE_SIZE);
+  const firstTileY = Math.floor(originY / TILE_SIZE), lastTileY = Math.floor((originY + H) / TILE_SIZE);
+  const numTiles = Math.pow(2, mapZoom);
+
+  let html = '';
+  for(let tx = firstTileX; tx <= lastTileX; tx++){
+    for(let ty = firstTileY; ty <= lastTileY; ty++){
+      if(ty < 0 || ty >= numTiles) continue;
+      const wrappedX = ((tx % numTiles) + numTiles) % numTiles;
+      const left = tx * TILE_SIZE - originX, top = ty * TILE_SIZE - originY;
+      const sub = 'abc'[Math.abs(tx + ty) % 3];
+      html += `<img src="https://${sub}.tile.openstreetmap.org/${mapZoom}/${wrappedX}/${ty}.png" style="position:absolute;left:${left}px;top:${top}px;width:${TILE_SIZE}px;height:${TILE_SIZE}px;" draggable="false" alt="">`;
+    }
+  }
+  tilesEl.innerHTML = html;
+  tilesEl.dataset.originX = originX;
+  tilesEl.dataset.originY = originY;
+  updateMapMarker();
+}
+
+function updateMapMarker(){
+  const marker = document.getElementById('map-marker');
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  if(isNaN(lat) || isNaN(lon)){ marker.style.display = 'none'; return; }
+  const tilesEl = document.getElementById('map-tiles');
+  const originX = parseFloat(tilesEl.dataset.originX || 0), originY = parseFloat(tilesEl.dataset.originY || 0);
+  const px = lonLatToWorldPx(lon, lat, mapZoom);
+  marker.style.left = (px.x - originX) + 'px';
+  marker.style.top = (px.y - originY) + 'px';
+  marker.style.display = 'block';
+}
+
+function setLatLonFromMapClick(clientX, clientY){
+  const wrap = document.getElementById('map-wrap');
+  const rect = wrap.getBoundingClientRect();
+  const tilesEl = document.getElementById('map-tiles');
+  const originX = parseFloat(tilesEl.dataset.originX || 0), originY = parseFloat(tilesEl.dataset.originY || 0);
+  const {lat, lon} = worldPxToLonLat(originX + (clientX - rect.left), originY + (clientY - rect.top), mapZoom);
+  mapCenter = {lat: clampLat(lat), lon: normLon(lon)};
+  document.getElementById('lat').value = mapCenter.lat.toFixed(4);
+  document.getElementById('lon').value = mapCenter.lon.toFixed(4);
+  document.getElementById('lat').dispatchEvent(new Event('input', {bubbles:true}));
+  document.getElementById('lon').dispatchEvent(new Event('input', {bubbles:true}));
+  renderMap();
+}
+
+(function initMap(){
+  const wrap = document.getElementById('map-wrap');
+  let dragging = false, dragMoved = false, dragStart = null;
+
+  wrap.addEventListener('mousedown', e=>{
+    dragging = true; dragMoved = false;
+    dragStart = {x:e.clientX, y:e.clientY, center:{...mapCenter}};
+  });
+  window.addEventListener('mousemove', e=>{
+    if(!dragging) return;
+    const dx = e.clientX - dragStart.x, dy = e.clientY - dragStart.y;
+    if(Math.abs(dx) > 3 || Math.abs(dy) > 3) dragMoved = true;
+    if(!dragMoved) return;
+    const startPx = lonLatToWorldPx(dragStart.center.lon, dragStart.center.lat, mapZoom);
+    const ll = worldPxToLonLat(startPx.x - dx, startPx.y - dy, mapZoom);
+    mapCenter = {lat: clampLat(ll.lat), lon: normLon(ll.lon)};
+    renderMap();
+  });
+  window.addEventListener('mouseup', e=>{
+    if(!dragging) return;
+    dragging = false;
+    if(!dragMoved && e.target.closest('#map-wrap')) setLatLonFromMapClick(e.clientX, e.clientY);
+  });
+  wrap.addEventListener('wheel', e=>{
+    e.preventDefault();
+    mapZoom = Math.max(1, Math.min(9, mapZoom + (e.deltaY < 0 ? 1 : -1)));
+    renderMap();
+  }, {passive:false});
+  document.getElementById('map-zoom-in').addEventListener('click', ()=>{ mapZoom = Math.min(9, mapZoom + 1); renderMap(); });
+  document.getElementById('map-zoom-out').addEventListener('click', ()=>{ mapZoom = Math.max(1, mapZoom - 1); renderMap(); });
+  window.addEventListener('resize', renderMap);
+  ['lat','lon'].forEach(id=>document.getElementById(id).addEventListener('change', ()=>{
+    const lat = parseFloat(document.getElementById('lat').value), lon = parseFloat(document.getElementById('lon').value);
+    if(!isNaN(lat) && !isNaN(lon)){ mapCenter = {lat, lon}; renderMap(); }
+  }));
+
+  renderMap();
+})();
 
 /* ── Parse a comma-separated list of positive numbers ── */
 function parseSizeList(str, label){
@@ -852,12 +984,21 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
 
   const btn=document.getElementById('btn-run'); btn.disabled=true;
   try{
-    setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
-    const {datasetName, displayName, year, interval} = await discoverDataset(lat, lon);
+    let datasetName, displayName, year, interval, hourly, meta;
+    if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
+      setSt(`Reusing cached NSRDB data for (${lat}, ${lon}) — coordinates unchanged, skipping NLR request…`);
+      await new Promise(r=>setTimeout(r,40));
+      ({datasetName, displayName, year, interval, hourly, meta} = nlrCache);
+    } else {
+      setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
+      ({datasetName, displayName, year, interval} = await discoverDataset(lat, lon));
 
-    setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
-    const {hourly,meta} = await fetchNLR(lat, lon, email, datasetName, year, interval);
-    if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
+      setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
+      ({hourly, meta} = await fetchNLR(lat, lon, email, datasetName, year, interval));
+      if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
+
+      nlrCache = {lat, lon, datasetName, displayName, year, interval, hourly, meta};
+    }
 
     setSt(`Received ${hourly.length} hourly GHI readings. Simulating ${CONFIGS.length} configuration${CONFIGS.length===1?'':'s'}…`);
     await new Promise(r=>setTimeout(r,40));
