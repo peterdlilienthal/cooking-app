@@ -95,6 +95,8 @@
   .matrix-cell{cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;}
   .matrix-cell:hover{background:rgba(255,255,255,.03);}
   .matrix-cell.active-cell{background:rgba(245,166,35,.1);}
+  .scatter-dot{cursor:pointer;transition:r .12s;}
+  .scatter-dot:hover{stroke:var(--sun);stroke-width:2;}
 </style>
 </head>
 <body>
@@ -156,9 +158,9 @@
         <span class="hint">Comma-separated, e.g. 350,700,1050</span>
       </div>
       <div class="field">
-        <label>Battery sizes to simulate (kWh)</label>
-        <input type="text" id="batt-sizes" value="1,2">
-        <span class="hint">Comma-separated, e.g. 1,2,3</span>
+        <label>Battery sizes to simulate (Wh)</label>
+        <input type="text" id="batt-sizes" value="1000,2000">
+        <span class="hint">Comma-separated, e.g. 1000,2000,3000</span>
       </div>
     </div>
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
@@ -206,6 +208,11 @@
       <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
+      <div class="card-title">📈 Cost vs. Not-Met Days</div>
+      <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below.</p>
+    </div>
+    <div class="card">
       <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
       <div class="score-grid" id="score-grid"></div>
       <div class="src-note" id="src-note"></div>
@@ -251,7 +258,7 @@ function updateComboPreview(){
     const pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
     const battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
     const combos = [];
-    for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}kWh`);
+    for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}Wh`);
     el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}: ${combos.join(', ')}`;
     el.style.color = '';
   }catch(e){
@@ -456,7 +463,7 @@ function exportHourlyCSV(run){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`solar_sim_${run.pv}W_${run.batt}kWh_${run.year}.csv`;
+  a.download=`solar_sim_${run.pv}W_${run.batt}Wh_${run.year}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -475,7 +482,7 @@ function renderComparison(){
       const activeCls = i===activeCfgIdx ? ' active-row' : '';
       return `<tr data-idx="${i}" class="${activeCls}">
         <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
-        <td style="font-family:'Space Mono',monospace">${run.batt} kWh</td>
+        <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td class="cg">${s.met}</td>
         <td class="cw">${s.partial}</td>
         <td class="cb">${s.fail}</td>
@@ -491,6 +498,7 @@ function renderComparison(){
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
+      renderScatter();
       renderDetail();
     });
   });
@@ -510,7 +518,7 @@ function renderNotMetMatrix(){
 
   let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   for(const batt of battSizes){
-    html += `<tr><th>${batt} kWh</th>`;
+    html += `<tr><th>${batt} Wh</th>`;
     for(const pv of pvSizes){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
@@ -531,6 +539,7 @@ function renderNotMetMatrix(){
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
+      renderScatter();
       renderDetail();
     });
   });
@@ -547,7 +556,7 @@ function renderCostMatrix(){
 
   let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   for(const batt of battSizes){
-    html += `<tr><th>${batt} kWh</th>`;
+    html += `<tr><th>${batt} Wh</th>`;
     for(const pv of pvSizes){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
@@ -569,6 +578,65 @@ function renderCostMatrix(){
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
+      renderScatter();
+      renderDetail();
+    });
+  });
+}
+
+/* ── Render: cost vs. not-met-days scatter plot ── */
+function renderScatter(){
+  const W=640, H=380, M={l:64,r:20,t:20,b:50};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const xs = allRuns.map(r=>r.summary.notMet);
+  const ys = allRuns.map(r=>r.cost);
+  const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
+  const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
+  const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
+  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
+  const yHi = Math.ceil(yMaxRaw+yPad);
+
+  const xScale = v => M.l + (v/xMax)*plotW;
+  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
+
+  const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(Math.round(xMax*i/5));
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+
+  let svg = '';
+  xTicks.forEach(t=>{
+    const x=xScale(t);
+    svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
+    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">${t}</text>`;
+  });
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
+  });
+  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif">Not-met days / year</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
+
+  allRuns.forEach((run,i)=>{
+    const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
+    const s=run.summary;
+    const fill = s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
+    const isActive = i===activeCfgIdx;
+    const r = isActive?8:6;
+    svg += `<circle class="scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${s.notMet} not-met days, $${Math.round(run.cost).toLocaleString()}</title></circle>`;
+  });
+
+  const svgEl = document.getElementById('scatter-chart');
+  svgEl.innerHTML = svg;
+  svgEl.querySelectorAll('.scatter-dot').forEach(dot=>{
+    dot.addEventListener('click', ()=>{
+      activeCfgIdx = +dot.dataset.idx;
+      renderComparison();
+      renderNotMetMatrix();
+      renderCostMatrix();
+      renderScatter();
       renderDetail();
     });
   });
@@ -582,10 +650,10 @@ function renderDetail(){
   const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
   const s = summarize(results);
   const Wp=pv;
-  const kWhTotal = batt;
+  const whTotal = batt;
   const col=s.pct>=80?'cg':s.pct>=50?'cw':'cb';
 
-  document.getElementById('detail-label').textContent = `${Wp} W · ${kWhTotal} kWh`;
+  document.getElementById('detail-label').textContent = `${Wp} W · ${whTotal} Wh`;
 
   document.getElementById('score-grid').innerHTML=`
     <div class="score-box hl"><div class="sc-num ${col}">${s.pct}%</div><div class="sc-unit">of days</div><div class="sc-label">Load fully met</div></div>
@@ -593,7 +661,7 @@ function renderDetail(){
     <div class="score-box"><div class="sc-num cw">${s.partial}</div><div class="sc-unit">days</div><div class="sc-label">Partial supply</div></div>
     <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Significant shortfall</div></div>
     <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">PV array</div></div>
-    <div class="score-box"><div class="sc-num cs">${kWhTotal}</div><div class="sc-unit">kWh storage</div><div class="sc-label">Battery bank</div></div>`;
+    <div class="score-box"><div class="sc-num cs">${whTotal}</div><div class="sc-unit">Wh storage</div><div class="sc-label">Battery bank</div></div>`;
   document.getElementById('src-note').innerHTML=`<strong style="color:var(--sun)">Data:</strong> ${run.datasetLabel} · ${year} · ${run.interval}-min GHI · ${meta}`;
 
   // Calendar
@@ -623,7 +691,7 @@ function renderDetail(){
   const best =md.reduce((a,b)=>a.met/a.days>b.met/b.days?a:b);
   const dayWh = run.dayWh, nightWh = run.nightWh;
   const kwh=(dayWh+nightWh)/1000;
-  let v=s.pct>=95?`✅ Excellent — ${Wp} W / ${kWhTotal} kWh fully covers your ${kwh.toFixed(1)} kWh/day on ${s.pct}% of days.`
+  let v=s.pct>=95?`✅ Excellent — ${Wp} W / ${whTotal} Wh fully covers your ${kwh.toFixed(1)} kWh/day on ${s.pct}% of days.`
      :s.pct>=80?`🟡 Good — ${s.fail} days/year see shortfalls, mostly in ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%). One more panel or battery would push past 95%.`
      :s.pct>=50?`⚠️ Marginal — only ${s.pct}% of days fully covered. Your ${kwh.toFixed(1)} kWh/day load is large for ${Wp} W of panels. Consider upgrading.`
      :`❌ Undersized — ${s.pct}% success. Try a larger config or reduce your load.`;
@@ -670,8 +738,8 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
-      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt*1000);
-      const cost = cfg.pv*costPvW + cfg.batt*costBattKwh + costFixed;
+      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt);
+      const cost = cfg.pv*costPvW + (cfg.batt/1000)*costBattKwh + costFixed;
       return {
         pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results), cost,
         year, meta, dayWh, nightWh,
@@ -686,6 +754,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     renderComparison();
     renderNotMetMatrix();
     renderCostMatrix();
+    renderScatter();
     renderDetail();
     document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
