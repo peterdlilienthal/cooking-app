@@ -89,6 +89,12 @@
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
   .cmp-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:10px;}
+  .matrix-tbl{table-layout:fixed;min-width:100%;}
+  .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
+  .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
+  .matrix-cell{cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;}
+  .matrix-cell:hover{background:rgba(255,255,255,.03);}
+  .matrix-cell.active-cell{background:rgba(245,166,35,.1);}
 </style>
 </head>
 <body>
@@ -167,6 +173,11 @@
       <div class="card-title">⚖️ Configuration Comparison</div>
       <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
       <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="notmet-matrix"></table></div>
+      <p class="cmp-hint">Days per year the load wasn't fully met. Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
       <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
@@ -452,6 +463,7 @@ function renderComparison(){
     row.addEventListener('click', ()=>{
       activeCfgIdx = +row.dataset.idx;
       renderComparison();
+      renderNotMetMatrix();
       renderDetail();
     });
   });
@@ -459,6 +471,39 @@ function renderComparison(){
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       exportHourlyCSV(allRuns[+btn.dataset.idx]);
+    });
+  });
+}
+
+/* ── Render: not-met-days matrix, PV size (columns) × battery size (rows) ── */
+function renderNotMetMatrix(){
+  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
+
+  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  for(const batt of battSizes){
+    html += `<tr><th>${batt} kWh</th>`;
+    for(const pv of pvSizes){
+      const idx = idxByKey.get(`${pv}|${batt}`);
+      if(idx===undefined){ html += '<td>—</td>'; continue; }
+      const s = allRuns[idx].summary;
+      const cls = s.pct>=80?'cg':s.pct>=50?'cw':'cb';
+      const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
+      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${s.notMet}</span></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+
+  const tbl = document.getElementById('notmet-matrix');
+  tbl.innerHTML = html;
+  tbl.querySelectorAll('.matrix-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      activeCfgIdx = +td.dataset.idx;
+      renderComparison();
+      renderNotMetMatrix();
+      renderDetail();
     });
   });
 }
@@ -566,6 +611,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     setSt('');
     document.getElementById('results').style.display='block';
     renderComparison();
+    renderNotMetMatrix();
     renderDetail();
     document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
