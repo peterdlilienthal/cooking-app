@@ -65,8 +65,7 @@ trusting the numbers for a real installation:
 ## Gotchas
 
 - **API domain**: NREL's `developer.nrel.gov` was retired; use
-  `developer.nlr.gov`. `nlr_proxy.py` tries `.nlr.gov` first and falls back to
-  `.nrel.gov`.
+  `developer.nlr.gov`. `nlr_proxy.py` only forwards to `.nlr.gov`.
 - **Windows console encoding**: `nlr_proxy.py` forces UTF-8 stdout/stderr —
   without it, the proxy crashes on startup printing its banner (cp1252 can't
   encode the box-drawing characters).

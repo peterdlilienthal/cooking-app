@@ -29,7 +29,6 @@ sys.stderr.reconfigure(encoding="utf-8")
 PORT = 8765
 NLR_HOSTS = [
     "developer.nlr.gov",
-    "developer.nrel.gov",
 ]
 
 CORS_HEADERS = {
@@ -76,7 +75,6 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
         print(f"\n→ Proxying to: {target_url[:100]}...")
 
-        # Try each NLR host in order (new domain first)
         last_error = None
         for host in NLR_HOSTS:
             url = target_url.replace(target_parsed.hostname, host, 1)
@@ -134,9 +132,7 @@ def main():
 ║         Listening on http://localhost:{PORT}  ║
 ╚══════════════════════════════════════════════╝
 
-  Requests will be forwarded to:
-    1. developer.nlr.gov  (primary)
-    2. developer.nrel.gov (fallback)
+  Requests will be forwarded to developer.nlr.gov
 
   Press Ctrl+C to stop.
 """)
