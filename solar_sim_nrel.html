@@ -208,9 +208,12 @@
       <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
-      <div class="card-title">📈 Cost vs. Not-Met Days</div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>📈 Cost vs. Not-Met Days</span>
+        <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+      </div>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report packs your inputs and this chart onto one page.</p>
     </div>
     <div class="card">
       <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
@@ -641,6 +644,128 @@ function renderScatter(){
     });
   });
 }
+
+/* ── Report: light-theme redraw of the scatter chart onto a canvas (for the Word export) ── */
+function buildReportScatterCanvas(){
+  const W=900, H=460, M={l:80,r:30,t:30,b:60};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const xs = allRuns.map(r=>r.summary.notMet);
+  const ys = allRuns.map(r=>r.cost);
+  const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
+  const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
+  const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
+  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
+  const yHi = Math.ceil(yMaxRaw+yPad);
+  const xScale = v => M.l + (v/xMax)*plotW;
+  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.font = '12px Arial';
+  const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(Math.round(xMax*i/5));
+  xTicks.forEach(t=>{
+    const x=xScale(t);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(String(t), x, M.t+plotH+20);
+  });
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='right'; ctx.fillText('$'+t.toLocaleString(), M.l-10, y+4);
+  });
+  ctx.strokeStyle='#333333';
+  ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
+
+  ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
+  ctx.fillText('Not-met days / year', M.l+plotW/2, H-14);
+  ctx.save();
+  ctx.translate(20, M.t+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Total cost ($)', 0, 0);
+  ctx.restore();
+
+  allRuns.forEach((run,i)=>{
+    const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
+    const s=run.summary;
+    const fill = s.pct>=80?'#27AE60':s.pct>=50?'#E67E22':'#C0392B';
+    const isActive = i===activeCfgIdx;
+    ctx.beginPath(); ctx.arc(cx,cy,isActive?8:6,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill();
+    if(isActive){ ctx.lineWidth=2.5; ctx.strokeStyle='#F5A623'; ctx.stroke(); }
+  });
+
+  return canvas;
+}
+
+function base64ToHex(b64){
+  const raw = atob(b64);
+  let hex = '';
+  for(let i=0;i<raw.length;i++){
+    const h = raw.charCodeAt(i).toString(16);
+    hex += h.length===2 ? h : '0'+h;
+  }
+  return hex;
+}
+
+/* ── Report: build a one-page .doc (RTF) with the inputs and the scatter chart ── */
+function downloadWordReport(){
+  if(!allRuns || !allRuns.length){ setErr('Run a simulation first, then download the report.'); return; }
+
+  const g = id => document.getElementById(id).value;
+  const inputs = [
+    ['Location (lat, lon)', `${g('lat')}, ${g('lon')}`],
+    ['Daytime energy need', `${g('day-load')} Wh`],
+    ['Night-time energy need', `${g('night-load')} Wh`],
+    ['PV sizes simulated', `${g('pv-sizes')} W`],
+    ['Battery sizes simulated', `${g('batt-sizes')} Wh`],
+    ['Cost per watt (PV)', `$${g('cost-pv-w')}`],
+    ['Cost per kWh (battery)', `$${g('cost-batt-kwh')}`],
+    ['Inverter, controls & misc', `$${g('cost-fixed')}`],
+    ['Data source', `${allRuns[0].datasetLabel} \u2014 ${allRuns[0].year}`]
+  ];
+
+  const canvas = buildReportScatterCanvas();
+  const pngHex = base64ToHex(canvas.toDataURL('image/png').split(',')[1]);
+  const picWgoal = Math.round(6.2*1440);
+  const picHgoal = Math.round(picWgoal * canvas.height / canvas.width);
+
+  const esc = s => String(s).replace(/[\\{}]/g,c=>'\\'+c).replace(/[^\x00-\x7F]/g,c=>'\\u'+c.charCodeAt(0)+'?');
+
+  let rows = '';
+  inputs.forEach(([label,val])=>{
+    rows += `\\trowd\\trgaph108\\trleft0\\cellx2600\\cellx9500\n`
+          + `\\pard\\intbl\\b ${esc(label)}\\b0\\cell\n`
+          + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
+  });
+
+  const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033
+{\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}
+\\paperw12240\\paperh15840\\margl700\\margr700\\margt600\\margb600
+\\pard\\qc\\f0\\fs36\\b Off-Grid Solar Simulator \\emdash  Report\\b0\\par
+\\pard\\qc\\fs18 Generated ${esc(new Date().toLocaleDateString())}\\par
+\\pard\\par
+\\pard\\fs24\\b Inputs\\b0\\fs20\\par
+${rows}
+\\pard\\par
+\\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
+\\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
+}`;
+
+  const blob = new Blob([rtf], {type:'application/rtf'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `solar-report-${new Date().toISOString().slice(0,10)}.doc`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+document.getElementById('btn-report').addEventListener('click', downloadWordReport);
 
 /* ── Render: detail view for the selected config ── */
 function renderDetail(){
