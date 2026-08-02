@@ -164,6 +164,27 @@
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
+  <div class="card">
+    <div class="card-title">💰 System Cost</div>
+    <div class="fields">
+      <div class="field">
+        <label>$ per watt (PV)</label>
+        <input type="number" id="cost-pv-w" value="1.00" min="0" step="0.01">
+        <span class="hint">Panel + mounting cost per watt</span>
+      </div>
+      <div class="field">
+        <label>$ per kWh (battery)</label>
+        <input type="number" id="cost-batt-kwh" value="400" min="0" step="1">
+        <span class="hint">Cost per kWh of battery capacity</span>
+      </div>
+      <div class="field">
+        <label>Inverter, controls &amp; misc ($)</label>
+        <input type="number" id="cost-fixed" value="500" min="0" step="10">
+        <span class="hint">Flat cost, same across all configs</span>
+      </div>
+    </div>
+  </div>
+
   <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
   <div id="status"></div>
   <div id="error-msg"></div>
@@ -178,6 +199,11 @@
       <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
       <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="notmet-matrix"></table></div>
       <p class="cmp-hint">Days per year the load wasn't fully met. Click a cell to see its day-by-day detail below.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
+      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
       <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
@@ -464,6 +490,7 @@ function renderComparison(){
       activeCfgIdx = +row.dataset.idx;
       renderComparison();
       renderNotMetMatrix();
+      renderCostMatrix();
       renderDetail();
     });
   });
@@ -503,6 +530,45 @@ function renderNotMetMatrix(){
       activeCfgIdx = +td.dataset.idx;
       renderComparison();
       renderNotMetMatrix();
+      renderCostMatrix();
+      renderDetail();
+    });
+  });
+}
+
+/* ── Render: total cost matrix, PV size (columns) × battery size (rows) ── */
+function renderCostMatrix(){
+  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
+  const costs = allRuns.map(r=>r.cost);
+  const minC = Math.min(...costs), maxC = Math.max(...costs);
+  const fmt = c => '$'+Math.round(c).toLocaleString();
+
+  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  for(const batt of battSizes){
+    html += `<tr><th>${batt} kWh</th>`;
+    for(const pv of pvSizes){
+      const idx = idxByKey.get(`${pv}|${batt}`);
+      if(idx===undefined){ html += '<td>—</td>'; continue; }
+      const run = allRuns[idx];
+      const frac = maxC>minC ? (run.cost-minC)/(maxC-minC) : 0;
+      const cls = frac<=0.33?'cg':frac<=0.66?'cw':'cb';
+      const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
+      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${fmt(run.cost)}</span></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+
+  const tbl = document.getElementById('cost-matrix');
+  tbl.innerHTML = html;
+  tbl.querySelectorAll('.matrix-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      activeCfgIdx = +td.dataset.idx;
+      renderComparison();
+      renderNotMetMatrix();
+      renderCostMatrix();
       renderDetail();
     });
   });
@@ -573,9 +639,15 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
   const dayWh=parseFloat(document.getElementById('day-load').value);
   const nightWh=parseFloat(document.getElementById('night-load').value);
   const email=document.getElementById('email').value.trim();
+  const costPvW=parseFloat(document.getElementById('cost-pv-w').value);
+  const costBattKwh=parseFloat(document.getElementById('cost-batt-kwh').value);
+  const costFixed=parseFloat(document.getElementById('cost-fixed').value);
   if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
   if(!email.includes('@')){setErr('Please enter a valid email (required by NLR for API access).');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
+  if(isNaN(costPvW)||costPvW<0){setErr('$ per watt (PV) must be a non-negative number.');return;}
+  if(isNaN(costBattKwh)||costBattKwh<0){setErr('$ per kWh (battery) must be a non-negative number.');return;}
+  if(isNaN(costFixed)||costFixed<0){setErr('Inverter, controls & misc ($) must be a non-negative number.');return;}
 
   let pvSizes, battSizes;
   try{
@@ -599,8 +671,9 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
 
     allRuns = CONFIGS.map(cfg=>{
       const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt*1000);
+      const cost = cfg.pv*costPvW + cfg.batt*costBattKwh + costFixed;
       return {
-        pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results),
+        pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results), cost,
         year, meta, dayWh, nightWh,
         datasetLabel: displayName, interval
       };
@@ -612,6 +685,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     document.getElementById('results').style.display='block';
     renderComparison();
     renderNotMetMatrix();
+    renderCostMatrix();
     renderDetail();
     document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
