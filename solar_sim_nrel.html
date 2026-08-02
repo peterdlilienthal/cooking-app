@@ -142,27 +142,17 @@
 
   <div class="card">
     <div class="card-title">🔆 System Configurations</div>
-    <p class="sys-note">Every run tests every combination of panel count × battery count, so you can compare them directly.</p>
+    <p class="sys-note">Every run tests every combination of PV size × battery size, so you can compare them directly.</p>
     <div class="fields">
       <div class="field">
-        <label>Panel size (W each)</label>
-        <input type="number" id="panel-w" value="350" min="1" step="1">
-        <span class="hint">Rated wattage of a single panel</span>
+        <label>PV sizes to simulate (W)</label>
+        <input type="text" id="pv-sizes" value="350,700">
+        <span class="hint">Comma-separated, e.g. 350,700,1050</span>
       </div>
       <div class="field">
-        <label># of panels to simulate</label>
-        <input type="text" id="panel-counts" value="1,2">
+        <label>Battery sizes to simulate (kWh)</label>
+        <input type="text" id="batt-sizes" value="1,2">
         <span class="hint">Comma-separated, e.g. 1,2,3</span>
-      </div>
-      <div class="field">
-        <label>Battery size (kWh each)</label>
-        <input type="number" id="batt-kwh" value="1" min="0.1" step="0.1">
-        <span class="hint">Usable capacity of a single battery</span>
-      </div>
-      <div class="field">
-        <label># of batteries to simulate</label>
-        <input type="text" id="batt-counts" value="1,2">
-        <span class="hint">Comma-separated, e.g. 1,2</span>
       </div>
     </div>
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
@@ -210,21 +200,21 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let allRuns = null;      // [{p,b,results,summary}, ...] populated after a run
 let activeCfgIdx = 0;    // which config's detail view is showing (defaults to best after a run)
 
-/* ── Parse a comma-separated list of positive whole numbers ── */
-function parseCountList(str, label){
+/* ── Parse a comma-separated list of positive numbers ── */
+function parseSizeList(str, label){
   const nums = str.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
   if(!nums.length) throw new Error(`Please enter at least one value for ${label}.`);
-  if(nums.some(n=>isNaN(n)||n<=0||!Number.isInteger(n))) throw new Error(`${label} must be a comma-separated list of positive whole numbers (e.g. 1,2,3).`);
+  if(nums.some(n=>isNaN(n)||n<=0)) throw new Error(`${label} must be a comma-separated list of positive numbers (e.g. 1,2,3).`);
   return [...new Set(nums)].sort((a,b)=>a-b);
 }
 
 function updateComboPreview(){
   const el = document.getElementById('combo-preview');
   try{
-    const panelCounts = parseCountList(document.getElementById('panel-counts').value, 'panel counts');
-    const battCounts = parseCountList(document.getElementById('batt-counts').value, 'battery counts');
+    const pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
+    const battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
     const combos = [];
-    for(const p of panelCounts) for(const b of battCounts) combos.push(`${p}×${b}`);
+    for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}kWh`);
     el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}: ${combos.join(', ')}`;
     el.style.color = '';
   }catch(e){
@@ -232,7 +222,7 @@ function updateComboPreview(){
     el.style.color = '#E74C3C';
   }
 }
-['panel-counts','batt-counts'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
+['pv-sizes','batt-sizes'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
 updateComboPreview();
 
 const setSt=(msg)=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`<span class="spinner"></span>${msg}`:'';}
@@ -360,9 +350,9 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
 }
 
 /* ── Simulate ── */
-function simulate(hourly, dayWh, nightWh, numP, numB, year, panelW, battWh){
-  const Wp     = numP*panelW;
-  const capWh  = numB*battWh;
+function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
+  const Wp     = pvW;
+  const capWh  = battWh;
   const minWh  = capWh*0.10;
   const cEff   = Math.sqrt(0.95);
   const dEff   = Math.sqrt(0.95);
@@ -429,7 +419,7 @@ function exportHourlyCSV(run){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`solar_sim_${run.p}x${run.b}_${run.year}.csv`;
+  a.download=`solar_sim_${run.pv}W_${run.batt}kWh_${run.year}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -440,16 +430,15 @@ function exportHourlyCSV(run){
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>Config</th><th>Panels</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const s=run.summary;
       const bc=s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
       const star = run===best ? ' ★' : '';
       const activeCls = i===activeCfgIdx ? ' active-row' : '';
       return `<tr data-idx="${i}" class="${activeCls}">
-        <td style="font-family:'Space Mono',monospace">${run.p}×${run.b}${star}</td>
-        <td style="font-family:'Space Mono',monospace">${run.p*run.panelW} W</td>
-        <td style="font-family:'Space Mono',monospace">${run.b*run.battKwh} kWh</td>
+        <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
+        <td style="font-family:'Space Mono',monospace">${run.batt} kWh</td>
         <td class="cg">${s.met}</td>
         <td class="cw">${s.partial}</td>
         <td class="cb">${s.fail}</td>
@@ -477,23 +466,23 @@ function renderComparison(){
 /* ── Render: detail view for the selected config ── */
 function renderDetail(){
   const run = allRuns[activeCfgIdx];
-  const {p:numP, b:numB, results, year, meta} = run;
+  const {pv, batt, results, year, meta} = run;
   const isLeap=year%4===0;
   const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
   const s = summarize(results);
-  const Wp=numP*run.panelW;
-  const kWhTotal = numB*run.battKwh;
+  const Wp=pv;
+  const kWhTotal = batt;
   const col=s.pct>=80?'cg':s.pct>=50?'cw':'cb';
 
-  document.getElementById('detail-label').textContent = `${numP}×${numB} (${Wp} W · ${kWhTotal} kWh)`;
+  document.getElementById('detail-label').textContent = `${Wp} W · ${kWhTotal} kWh`;
 
   document.getElementById('score-grid').innerHTML=`
     <div class="score-box hl"><div class="sc-num ${col}">${s.pct}%</div><div class="sc-unit">of days</div><div class="sc-label">Load fully met</div></div>
     <div class="score-box"><div class="sc-num cg">${s.met}</div><div class="sc-unit">days</div><div class="sc-label">Full success</div></div>
     <div class="score-box"><div class="sc-num cw">${s.partial}</div><div class="sc-unit">days</div><div class="sc-label">Partial supply</div></div>
     <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Significant shortfall</div></div>
-    <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">${numP}× ${run.panelW}W panel</div></div>
-    <div class="score-box"><div class="sc-num cs">${kWhTotal}</div><div class="sc-unit">kWh storage</div><div class="sc-label">${numB}× ${run.battKwh} kWh battery</div></div>`;
+    <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">PV array</div></div>
+    <div class="score-box"><div class="sc-num cs">${kWhTotal}</div><div class="sc-unit">kWh storage</div><div class="sc-label">Battery bank</div></div>`;
   document.getElementById('src-note').innerHTML=`<strong style="color:var(--sun)">Data:</strong> ${run.datasetLabel} · ${year} · ${run.interval}-min GHI · ${meta}`;
 
   // Calendar
@@ -539,21 +528,17 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
   const dayWh=parseFloat(document.getElementById('day-load').value);
   const nightWh=parseFloat(document.getElementById('night-load').value);
   const email=document.getElementById('email').value.trim();
-  const panelW=parseFloat(document.getElementById('panel-w').value);
-  const battKwh=parseFloat(document.getElementById('batt-kwh').value);
   if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
   if(!email.includes('@')){setErr('Please enter a valid email (required by NLR for API access).');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
-  if(isNaN(panelW)||panelW<=0){setErr('Panel size (W) must be a positive number.');return;}
-  if(isNaN(battKwh)||battKwh<=0){setErr('Battery size (kWh) must be a positive number.');return;}
 
-  let panelCounts, battCounts;
+  let pvSizes, battSizes;
   try{
-    panelCounts = parseCountList(document.getElementById('panel-counts').value, 'panel counts');
-    battCounts = parseCountList(document.getElementById('batt-counts').value, 'battery counts');
+    pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
+    battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
   }catch(e){ setErr(e.message); return; }
   const CONFIGS = [];
-  for(const p of panelCounts) for(const b of battCounts) CONFIGS.push({p,b});
+  for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
   const btn=document.getElementById('btn-run'); btn.disabled=true;
   try{
@@ -568,11 +553,11 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
-      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, cfg.p, cfg.b, year, panelW, battKwh*1000);
+      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt*1000);
       return {
-        p:cfg.p, b:cfg.b, results, hourlyLog, summary:summarize(results),
+        pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results),
         year, meta, dayWh, nightWh,
-        datasetLabel: displayName, interval, panelW, battKwh
+        datasetLabel: displayName, interval
       };
     });
     // default detail view to the best-performing config
