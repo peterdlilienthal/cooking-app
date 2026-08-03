@@ -87,6 +87,8 @@
   .src-note{font-size:11px;color:rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
+  .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:7px;padding:5px 10px;color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:11px;outline:none;width:150px;transition:border-color .2s;}
+  .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:10px;}
   .matrix-tbl{table-layout:fixed;min-width:100%;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
@@ -95,6 +97,11 @@
   .matrix-cell:hover{background:rgba(255,255,255,.03);}
   .matrix-cell.active-cell{background:rgba(245,166,35,.1);}
   .scatter-dot{cursor:pointer;transition:r .12s;}
+  .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-card{background:var(--night);border:1px solid rgba(245,166,35,.3);border-radius:16px;padding:26px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;}
+  .modal-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;}
+  .modal-close:hover{color:var(--white);}
+  .hist-bar{cursor:default;}
   .scatter-dot:hover{stroke:var(--sun);stroke-width:2;}
 </style>
 </head>
@@ -115,14 +122,22 @@
     <div class="fields">
       <div class="field">
         <label>Latitude</label>
-        <input type="number" id="lat" value="39.74" step="0.01" min="-90" max="90">
-        <span class="hint">e.g. 39.74 = Denver, CO</span>
+        <input type="number" id="lat" value="-1.29" step="0.01" min="-90" max="90">
+        <span class="hint">e.g. -1.29 = Nairobi, Kenya</span>
       </div>
       <div class="field">
         <label>Longitude</label>
-        <input type="number" id="lon" value="-104.98" step="0.01" min="-180" max="180">
-        <span class="hint">e.g. -104.98 = Denver, CO</span>
+        <input type="number" id="lon" value="36.82" step="0.01" min="-180" max="180">
+        <span class="hint">e.g. 36.82 = Nairobi, Kenya</span>
       </div>
+    </div>
+    <div class="field" style="margin-top:14px;">
+      <label>Or search by place name</label>
+      <div style="display:flex;gap:8px;">
+        <input type="text" id="place-search" placeholder="e.g. Nairobi, Kenya" style="flex:1;">
+        <button class="csv-btn" id="place-search-btn" type="button" style="padding:0 16px;">Search</button>
+      </div>
+      <span class="hint" id="place-search-status"></span>
     </div>
     <div id="map-wrap" style="position:relative;overflow:hidden;border-radius:10px;border:1px solid rgba(255,255,255,.12);height:320px;cursor:crosshair;user-select:none;margin-top:16px;">
       <div id="map-tiles" style="position:absolute;left:0;top:0;"></div>
@@ -209,12 +224,15 @@
 
   <div id="results">
     <div class="card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <span>📈 Cost vs. Not-Met Days</span>
-        <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+        <div style="display:flex;align-items:center;gap:6px;">
+          <input type="text" id="report-name" placeholder="Report name" class="report-name-input">
+          <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+        </div>
       </div>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report packs your inputs and this chart onto one page.</p>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
     </div>
     <div class="card">
       <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
@@ -255,6 +273,17 @@
   </div>
 </div>
 
+<div id="histogram-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+      <div class="card-title" style="margin-bottom:0;" id="histogram-title">📊 Unmet Energy Distribution</div>
+      <button class="modal-close" id="histogram-close" type="button">&times;</button>
+    </div>
+    <div class="cal-wrap"><svg id="histogram-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:320px;"></svg></div>
+    <p class="cmp-hint">Each bar is a range of daily unmet energy; height is the number of days that fell in that range.</p>
+  </div>
+</div>
+
 <script>
 const API_KEY = 'miJdkoFdKvj0XLnEyfSa9bcnHpRBv81IcDLCph6M';
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -262,6 +291,31 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let allRuns = null;      // [{p,b,results,summary}, ...] populated after a run
 let activeCfgIdx = 0;    // which config's detail view is showing (defaults to best after a run)
 let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,interval} for the last-fetched location — avoids re-hitting NLR when only load/PV/battery/cost inputs change
+
+/* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
+const CONFIG_STORAGE_KEY = 'solarSimConfig';
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','unmet-tolerance','email','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
+(function restoreSavedConfig(){
+  let saved;
+  try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
+  CONFIG_FIELD_IDS.forEach(id=>{
+    if(saved[id] === undefined) return;
+    const el = document.getElementById(id);
+    if(el) el.value = saved[id];
+  });
+})();
+function saveConfig(){
+  const data = {};
+  CONFIG_FIELD_IDS.forEach(id=>{
+    const el = document.getElementById(id);
+    if(el) data[id] = el.value;
+  });
+  try{ localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data)); }catch(e){ /* storage unavailable — not fatal */ }
+}
+CONFIG_FIELD_IDS.forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', saveConfig);
+});
 
 /* ── Clickable map: plain OSM raster tiles + hand-rolled Web Mercator slippy-map math (no map library) ── */
 const TILE_SIZE = 256;
@@ -381,6 +435,44 @@ function setLatLonFromMapClick(clientX, clientY){
 
   renderMap();
 })();
+
+/* ── Place-name search: geocode via OSM Nominatim (same provider as the map tiles, no key needed) ── */
+async function searchPlaceName(){
+  const input = document.getElementById('place-search');
+  const status = document.getElementById('place-search-status');
+  const query = input.value.trim();
+  if(!query){ status.textContent = 'Type a place name first.'; status.style.color = '#E74C3C'; return; }
+
+  status.textContent = 'Searching…'; status.style.color = '';
+  const btn = document.getElementById('place-search-btn'); btn.disabled = true;
+  try{
+    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+    const resp = await fetch(url);
+    if(!resp.ok) throw new Error(`Search failed (HTTP ${resp.status})`);
+    const results = await resp.json();
+    if(!results.length) throw new Error(`No location found for "${query}".`);
+
+    const lat = clampLat(parseFloat(results[0].lat)), lon = normLon(parseFloat(results[0].lon));
+    document.getElementById('lat').value = lat.toFixed(4);
+    document.getElementById('lon').value = lon.toFixed(4);
+    document.getElementById('lat').dispatchEvent(new Event('input', {bubbles:true}));
+    document.getElementById('lon').dispatchEvent(new Event('input', {bubbles:true}));
+    mapCenter = {lat, lon};
+    mapZoom = Math.max(mapZoom, 6);
+    renderMap();
+    status.textContent = `Found: ${results[0].display_name}`;
+    status.style.color = '';
+  }catch(e){
+    status.textContent = e.message;
+    status.style.color = '#E74C3C';
+  }finally{
+    btn.disabled = false;
+  }
+}
+document.getElementById('place-search-btn').addEventListener('click', searchPlaceName);
+document.getElementById('place-search').addEventListener('keydown', e=>{
+  if(e.key === 'Enter'){ e.preventDefault(); searchPlaceName(); }
+});
 
 /* ── Parse a comma-separated list of positive numbers ── */
 function parseSizeList(str, label){
@@ -608,11 +700,62 @@ function exportHourlyCSV(run){
   URL.revokeObjectURL(url);
 }
 
+/* ── Histogram: days by % unmet energy, for one config ── */
+function showHistogram(run){
+  const W=640, H=380, M={l:56,r:20,t:20,b:56};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const BIN_COUNT=10, BIN_WIDTH=100/BIN_COUNT;
+  const bins = new Array(BIN_COUNT).fill(0);
+  run.results.forEach(r=>{
+    const unmetPct = (1-r.frac)*100;
+    const idx = Math.min(BIN_COUNT-1, Math.max(0, Math.floor(unmetPct/BIN_WIDTH)));
+    bins[idx]++;
+  });
+  const maxCount = Math.max(...bins, 1);
+  const yMax = Math.ceil(maxCount*1.15/5)*5 || 5;
+
+  const xScale = i => M.l + (i/BIN_COUNT)*plotW;
+  const yScale = v => M.t + plotH - (v/yMax)*plotH;
+  const barW = (plotW/BIN_COUNT)*0.78;
+
+  let svg = '';
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yMax*i/5));
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">${t}</text>`;
+  });
+  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
+
+  bins.forEach((count,i)=>{
+    const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
+    const y = yScale(count);
+    const h = M.t+plotH-y;
+    const lo = Math.round(i*BIN_WIDTH), hi = Math.round((i+1)*BIN_WIDTH);
+    const fill = lo>=40 ? 'var(--bad)' : lo>=10 ? 'var(--warn)' : 'var(--good)';
+    svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" fill-opacity=".85"><title>${lo}–${hi}%: ${count} day${count===1?'':'s'}</title></rect>`;
+    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.6)" font-family="'Space Mono',monospace">${count}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.4)" font-family="'Space Mono',monospace">${lo}</text>`;
+  });
+
+  document.getElementById('histogram-title').textContent = `📊 Unmet Energy Distribution — ${run.pv} W / ${run.batt} Wh`;
+  document.getElementById('histogram-chart').innerHTML = svg;
+  document.getElementById('histogram-modal').style.display = 'flex';
+}
+document.getElementById('histogram-close').addEventListener('click', ()=>{ document.getElementById('histogram-modal').style.display='none'; });
+document.getElementById('histogram-modal').addEventListener('click', e=>{
+  if(e.target.id==='histogram-modal') document.getElementById('histogram-modal').style.display='none';
+});
+
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Full</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Full</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const s=run.summary;
       const bc=s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
@@ -625,7 +768,7 @@ function renderComparison(){
         <td class="cb">${s.fail}</td>
         <td class="cb" style="font-weight:700">${s.notMet}</td>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${s.pct}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${s.pct}%</span></div></td>
-        <td><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button></td>
+        <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn hist-btn" data-idx="${i}" type="button">📊 Histogram</button></div></td>
       </tr>`;
     }).join('') + '</tbody>';
 
@@ -639,10 +782,16 @@ function renderComparison(){
       renderDetail();
     });
   });
-  tbl.querySelectorAll('.csv-btn').forEach(btn=>{
+  tbl.querySelectorAll('.csv-btn:not(.hist-btn)').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       exportHourlyCSV(allRuns[+btn.dataset.idx]);
+    });
+  });
+  tbl.querySelectorAll('.hist-btn').forEach(btn=>{
+    btn.addEventListener('click', (e)=>{
+      e.stopPropagation();
+      showHistogram(allRuns[+btn.dataset.idx]);
     });
   });
 }
@@ -849,6 +998,10 @@ function base64ToHex(b64){
 function downloadWordReport(){
   if(!allRuns || !allRuns.length){ setErr('Run a simulation first, then download the report.'); return; }
 
+  const defaultName = `Solar Report ${new Date().toISOString().slice(0,10)}`;
+  const reportName = document.getElementById('report-name').value.trim() || defaultName;
+  const safeFileName = reportName.replace(/[\\/:*?"<>|]+/g,'').trim() || defaultName;
+
   const g = id => document.getElementById(id).value;
   const inputs = [
     ['Location (lat, lon)', `${g('lat')}, ${g('lon')}`],
@@ -877,14 +1030,46 @@ function downloadWordReport(){
           + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
   });
 
+  // PV (columns) × battery (rows) matrix, shared by the not-met-days and cost tables below
+  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
+  const usableWidth = 9840, labelW = 1600;
+  const colW = Math.floor((usableWidth - labelW) / pvSizes.length);
+  const cellxs = [labelW]; pvSizes.forEach((_,i)=>cellxs.push(labelW + colW*(i+1)));
+  const cellxStr = cellxs.map(x=>`\\cellx${x}`).join('');
+
+  const buildMatrixRows = cellText => {
+    let out = `\\trowd\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b Batt \\emdash  PV\\b0\\cell`;
+    pvSizes.forEach(pv => out += `\\pard\\intbl\\qc\\b ${pv}W\\b0\\cell`);
+    out += `\\row\n`;
+    battSizes.forEach(batt=>{
+      out += `\\trowd\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b ${batt}Wh\\b0\\cell`;
+      pvSizes.forEach(pv=>{
+        const idx = idxByKey.get(`${pv}|${batt}`);
+        out += `\\pard\\intbl\\qc ${esc(idx===undefined ? '\u2014' : cellText(allRuns[idx]))}\\cell`;
+      });
+      out += `\\row\n`;
+    });
+    return out;
+  };
+  const notMetRows = buildMatrixRows(run => String(run.summary.notMet));
+  const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
+
   const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033
 {\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}
 \\paperw12240\\paperh15840\\margl700\\margr700\\margt600\\margb600
-\\pard\\qc\\f0\\fs36\\b Off-Grid Solar Simulator \\emdash  Report\\b0\\par
+\\pard\\qc\\f0\\fs36\\b ${esc(reportName)}\\b0\\par
 \\pard\\qc\\fs18 Generated ${esc(new Date().toLocaleDateString())}\\par
 \\pard\\par
 \\pard\\fs24\\b Inputs\\b0\\fs20\\par
 ${rows}
+\\pard\\par
+\\pard\\fs24\\b Not-Met Days Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
+${notMetRows}
+\\pard\\par
+\\pard\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
+${costRows}
 \\pard\\par
 \\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
 \\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
@@ -894,7 +1079,7 @@ ${rows}
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `solar-report-${new Date().toISOString().slice(0,10)}.doc`;
+  a.download = `${safeFileName}.doc`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
