@@ -68,13 +68,12 @@
   .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.38);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
   .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
   .cal-cell.met{background:var(--good);opacity:.82;}
-  .cal-cell.partial{background:var(--warn);opacity:.82;}
   .cal-cell.fail{background:var(--bad);opacity:.72;}
   .cal-cell.empty{background:transparent;}
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
   .cal-legend span{font-size:11px;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
-  .leg-met::before{background:var(--good);} .leg-part::before{background:var(--warn);} .leg-fail::before{background:var(--bad);}
+  .leg-met::before{background:var(--good);} .leg-fail::before{background:var(--bad);}
 
   .mtbl{width:100%;border-collapse:collapse;font-size:13px;}
   .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
@@ -151,6 +150,11 @@
         <label>Night-time energy need (Wh)</label>
         <input type="number" id="night-load" value="300" min="0" step="10">
         <span class="hint">Drawn from battery after sunset</span>
+      </div>
+      <div class="field">
+        <label>Acceptable unmet energy on cloudy days (%)</label>
+        <input type="number" id="unmet-tolerance" value="10" min="0" max="100" step="1">
+        <span class="hint">Days below this shortfall count as success; above it, Failed</span>
       </div>
       <div class="field">
         <label>Your email (required by NLR)</label>
@@ -236,9 +240,8 @@
       <div class="card-title">📅 Day-by-Day Calendar</div>
       <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
       <div class="cal-legend">
-        <span class="leg-met">Full load met</span>
-        <span class="leg-part">Partial (≥60%)</span>
-        <span class="leg-fail">Significant shortfall</span>
+        <span class="leg-met">Success</span>
+        <span class="leg-fail">Failed</span>
       </div>
     </div>
     <div class="card">
@@ -529,7 +532,7 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
 }
 
 /* ── Simulate ── */
-function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
+function simulate(hourly, dayWh, nightWh, year, pvW, battWh, unmetTolerance){
   const Wp     = pvW;
   const capWh  = battWh;
   const minWh  = capWh*0.10;
@@ -575,7 +578,8 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
       const tot=dayWh+nightWh;
       const met=Math.min(dSrv,dayWh)+Math.min(nSrv,nightWh);
       const frac=tot>0?Math.min(1,met/tot):1;
-      results.push({m,d,frac,met:frac>=0.99,partial:frac>=0.60&&frac<0.99,fail:frac<0.60});
+      const isMet=(1-frac)<=unmetTolerance;
+      results.push({m,d,frac,met:isMet,fail:!isMet});
     }
   }
   return {results, hourlyLog};
@@ -584,9 +588,8 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
 function summarize(results){
   const total=results.length;
   const met=results.filter(r=>r.met).length;
-  const partial=results.filter(r=>r.partial).length;
   const fail=results.filter(r=>r.fail).length;
-  return {total,met,partial,fail,notMet:partial+fail,pct:Math.round(met/total*100)};
+  return {total,met,fail,notMet:fail,pct:Math.round(met/total*100)};
 }
 
 /* ── Export hourly detail for one config as a CSV download ── */
@@ -609,7 +612,7 @@ function exportHourlyCSV(run){
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Full</th><th>Partial</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Full</th><th>Failed</th><th>Not met</th><th>Success rate</th><th>Hourly data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const s=run.summary;
       const bc=s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
@@ -619,7 +622,6 @@ function renderComparison(){
         <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td class="cg">${s.met}</td>
-        <td class="cw">${s.partial}</td>
         <td class="cb">${s.fail}</td>
         <td class="cb" style="font-weight:700">${s.notMet}</td>
         <td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${s.pct}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${s.pct}%</span></div></td>
@@ -852,6 +854,7 @@ function downloadWordReport(){
     ['Location (lat, lon)', `${g('lat')}, ${g('lon')}`],
     ['Daytime energy need', `${g('day-load')} Wh`],
     ['Night-time energy need', `${g('night-load')} Wh`],
+    ['Acceptable unmet energy', `${g('unmet-tolerance')}%`],
     ['PV sizes simulated', `${g('pv-sizes')} W`],
     ['Battery sizes simulated', `${g('batt-sizes')} Wh`],
     ['Cost per watt (PV)', `$${g('cost-pv-w')}`],
@@ -915,8 +918,7 @@ function renderDetail(){
   document.getElementById('score-grid').innerHTML=`
     <div class="score-box hl"><div class="sc-num ${col}">${s.pct}%</div><div class="sc-unit">of days</div><div class="sc-label">Load fully met</div></div>
     <div class="score-box"><div class="sc-num cg">${s.met}</div><div class="sc-unit">days</div><div class="sc-label">Full success</div></div>
-    <div class="score-box"><div class="sc-num cw">${s.partial}</div><div class="sc-unit">days</div><div class="sc-label">Partial supply</div></div>
-    <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Significant shortfall</div></div>
+    <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Failed</div></div>
     <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">PV array</div></div>
     <div class="score-box"><div class="sc-num cs">${whTotal}</div><div class="sc-unit">Wh storage</div><div class="sc-label">Battery bank</div></div>`;
   document.getElementById('src-note').innerHTML=`<strong style="color:var(--sun)">Data:</strong> ${run.datasetLabel} · ${year} · ${run.interval}-min GHI · ${meta}`;
@@ -932,16 +934,16 @@ function renderDetail(){
     for(let d=0;d<31;d++){
       if(d<dim[m]){
         const r=results[ri++];
-        cal.appendChild(mkDiv('cal-cell '+(r.met?'met':r.partial?'partial':'fail'),'',`${MONTHS[m]} ${d+1}: ${Math.round(r.frac*100)}% met`));
+        cal.appendChild(mkDiv('cal-cell '+(r.met?'met':'fail'),'',`${MONTHS[m]} ${d+1}: ${Math.round(r.frac*100)}% met`));
       } else cal.appendChild(mkDiv('cal-cell empty'));
     }
   }
 
   // Monthly table
   const md=[];let ri2=0;
-  for(let m=0;m<12;m++){const sl=results.slice(ri2,ri2+dim[m]);ri2+=dim[m];md.push({m,days:dim[m],met:sl.filter(r=>r.met).length,part:sl.filter(r=>r.partial).length,fail:sl.filter(r=>r.fail).length});}
-  document.getElementById('mtbl').innerHTML=`<thead><tr><th>Month</th><th>Days</th><th>Full</th><th>Partial</th><th>Failed</th><th>Success rate</th></tr></thead><tbody>`+
-    md.map(mo=>{const pc=Math.round(mo.met/mo.days*100);const bc=pc>=80?'var(--good)':pc>=50?'var(--warn)':'var(--bad)';return`<tr><td>${MONTHS[mo.m]}</td><td style="font-family:'Space Mono',monospace">${mo.days}</td><td class="cg">${mo.met}</td><td class="cw">${mo.part}</td><td class="cb">${mo.fail}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${pc}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${pc}%</span></div></td></tr>`;}).join('')+'</tbody>';
+  for(let m=0;m<12;m++){const sl=results.slice(ri2,ri2+dim[m]);ri2+=dim[m];md.push({m,days:dim[m],met:sl.filter(r=>r.met).length,fail:sl.filter(r=>r.fail).length});}
+  document.getElementById('mtbl').innerHTML=`<thead><tr><th>Month</th><th>Days</th><th>Full</th><th>Failed</th><th>Success rate</th></tr></thead><tbody>`+
+    md.map(mo=>{const pc=Math.round(mo.met/mo.days*100);const bc=pc>=80?'var(--good)':pc>=50?'var(--warn)':'var(--bad)';return`<tr><td>${MONTHS[mo.m]}</td><td style="font-family:'Space Mono',monospace">${mo.days}</td><td class="cg">${mo.met}</td><td class="cb">${mo.fail}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${pc}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${pc}%</span></div></td></tr>`;}).join('')+'</tbody>';
 
   // Verdict
   const worst=md.reduce((a,b)=>a.met/a.days<b.met/b.days?a:b);
@@ -963,16 +965,19 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
   const lon=parseFloat(document.getElementById('lon').value);
   const dayWh=parseFloat(document.getElementById('day-load').value);
   const nightWh=parseFloat(document.getElementById('night-load').value);
+  const unmetTolerancePct=parseFloat(document.getElementById('unmet-tolerance').value);
   const email=document.getElementById('email').value.trim();
   const costPvW=parseFloat(document.getElementById('cost-pv-w').value);
   const costBattKwh=parseFloat(document.getElementById('cost-batt-kwh').value);
   const costFixed=parseFloat(document.getElementById('cost-fixed').value);
   if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
+  if(isNaN(unmetTolerancePct)||unmetTolerancePct<0||unmetTolerancePct>100){setErr('Acceptable unmet energy (%) must be between 0 and 100.');return;}
   if(!email.includes('@')){setErr('Please enter a valid email (required by NLR for API access).');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
   if(isNaN(costPvW)||costPvW<0){setErr('$ per watt (PV) must be a non-negative number.');return;}
   if(isNaN(costBattKwh)||costBattKwh<0){setErr('$ per kWh (battery) must be a non-negative number.');return;}
   if(isNaN(costFixed)||costFixed<0){setErr('Inverter, controls & misc ($) must be a non-negative number.');return;}
+  const unmetTolerance=unmetTolerancePct/100;
 
   let pvSizes, battSizes;
   try{
@@ -1004,7 +1009,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
-      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt);
+      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt, unmetTolerance);
       const cost = cfg.pv*costPvW + (cfg.batt/1000)*costBattKwh + costFixed;
       return {
         pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results), cost,

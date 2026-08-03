@@ -32,10 +32,12 @@ the proxy is what needs a real HTTP server, not the page itself).
 2. **Hourly GHI fetch** — downloads one year of hourly GHI as CSV for that
    dataset/year, through the local proxy.
 3. **Simulation** (`simulate()` in the `<script>`) — walks all 8760(ish) hours,
-   tracking battery state of charge, and classifies each day as
-   full/partial/failed based on what fraction of that day's total (day+night)
-   load was served. Runs once per PV-size × battery-size combination (the
-   cross product of the two comma-delimited size-list inputs).
+   tracking battery state of charge, and classifies each day as a success or
+   a failure based on whether the unmet fraction of that day's total
+   (day+night) load exceeds the user-set "acceptable unmet energy" tolerance
+   (`unmet-tolerance` input, default 10%). Runs once per PV-size ×
+   battery-size combination (the cross product of the two comma-delimited
+   size-list inputs).
 4. **Rendering** — a comparison table, two PV×battery matrices (not-met days,
    total cost), a cost-vs-reliability scatter plot, and a detail view
    (calendar/monthly/verdict) for whichever config is currently selected.
