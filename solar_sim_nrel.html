@@ -231,6 +231,11 @@
           <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
         </div>
       </div>
+      <div class="field" style="max-width:260px;margin-bottom:14px;">
+        <label>Max not-met days to show</label>
+        <input type="number" id="max-notmet-days" min="0" step="1" placeholder="No limit">
+        <span class="hint">Hides configs above this threshold from the plot only</span>
+      </div>
       <p id="scatter-summary" style="font-size:13px;margin:0 0 8px;"></p>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
@@ -318,7 +323,7 @@ let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,in
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
-const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','unmet-tolerance','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','unmet-tolerance','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name','max-notmet-days'];
 (function restoreSavedConfig(){
   let saved;
   try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
@@ -341,6 +346,8 @@ const unmetToleranceValEl = document.getElementById('unmet-tolerance-val');
 const updateUnmetToleranceLabel = () => { unmetToleranceValEl.textContent = `${unmetToleranceEl.value}%`; };
 updateUnmetToleranceLabel();
 unmetToleranceEl.addEventListener('input', updateUnmetToleranceLabel);
+
+document.getElementById('max-notmet-days').addEventListener('input', ()=>{ if(allRuns) renderScatter(); });
 
 CONFIG_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
@@ -1067,8 +1074,20 @@ function renderScatter(){
   const W=640, H=380, M={l:64,r:20,t:20,b:50};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
-  const xs = allRuns.map(r=>r.summary.notMet);
-  const ys = allRuns.map(r=>r.cost);
+  const maxNotMetRaw = parseFloat(document.getElementById('max-notmet-days').value);
+  const hasMaxNotMet = !isNaN(maxNotMetRaw) && maxNotMetRaw>=0;
+  const plotEntries = allRuns
+    .map((run,i)=>({run,i}))
+    .filter(e => !hasMaxNotMet || e.run.summary.notMet<=maxNotMetRaw);
+
+  if(!plotEntries.length){
+    document.getElementById('scatter-chart').innerHTML =
+      `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.61)" font-family="'Space Grotesk',sans-serif">No configs have ≤ ${maxNotMetRaw} not-met days</text>`;
+    return;
+  }
+
+  const xs = plotEntries.map(e=>e.run.summary.notMet);
+  const ys = plotEntries.map(e=>e.run.cost);
   const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
@@ -1097,7 +1116,7 @@ function renderScatter(){
   svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Not-met days / year</text>`;
   svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
-  allRuns.forEach((run,i)=>{
+  plotEntries.forEach(({run,i})=>{
     const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
     const s=run.summary;
     const fill = s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
