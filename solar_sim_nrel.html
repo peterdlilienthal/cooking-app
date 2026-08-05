@@ -198,12 +198,12 @@
       <div class="field">
         <label>$ per watt (PV)</label>
         <input type="number" id="cost-pv-w" value="1.00" min="0" step="0.01">
-        <span class="hint">Panel + mounting cost per watt</span>
+        <span class="hint">Total installed cost incl. shipping dealer margins, & mounting</span>
       </div>
       <div class="field">
         <label>$ per kWh (battery)</label>
         <input type="number" id="cost-batt-kwh" value="200" min="0" step="1">
-        <span class="hint">Cost per kWh of battery capacity</span>
+        <span class="hint">Total installed Cost per kWh of battery capacity</span>
       </div>
       <div class="field">
         <label>Inverter, controls &amp; misc ($)</label>
@@ -227,6 +227,7 @@
           <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
         </div>
       </div>
+      <p id="scatter-summary" style="font-size:13px;margin:0 0 8px;"></p>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
     </div>
@@ -511,7 +512,7 @@ function updateComboPreview(){
     const battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
     const combos = [];
     for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}Wh`);
-    el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}: ${combos.join(', ')}`;
+    el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}`;
     el.style.color = '';
   }catch(e){
     el.textContent = e.message;
@@ -666,14 +667,14 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh, unmetTolerance){
       const hrs=[];
       for(let h=0;h<24&&hIdx<hourly.length;h++,hIdx++) hrs.push({h,ghi:hourly[hIdx]});
 
-      const nSolar=Math.max(hrs.filter(h=>h.ghi>5).length,1);
-      const nNight=Math.max(hrs.filter(h=>h.ghi<=5).length,1);
+      const nSolar=Math.max(hrs.filter(h=>h.ghi>10).length,1);
+      const nNight=Math.max(hrs.filter(h=>h.ghi<=10).length,1);
       let dRem=dayWh,nRem=nightWh,dSrv=0,nSrv=0;
 
       for(const hr of hrs){
         const gen=(hr.ghi/1000)*Wp*pEff;
         let need, batCharge=0, batDischarge=0;
-        if(hr.ghi>5){
+        if(hr.ghi>10){
           need=Math.min(dayWh/nSolar,dRem);
           const fg=Math.min(gen,need);
           dSrv+=fg; dRem-=fg;
@@ -692,7 +693,7 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh, unmetTolerance){
       const tot=dayWh+nightWh;
       const met=Math.min(dSrv,dayWh)+Math.min(nSrv,nightWh);
       const frac=tot>0?Math.min(1,met/tot):1;
-      const isMet=(1-frac)<=unmetTolerance;
+      const isMet=(1-frac)<=unmetTolerance+1e-9;
       results.push({m,d,frac,met:isMet,fail:!isMet});
     }
   }
@@ -892,8 +893,26 @@ function renderCostMatrix(){
   });
 }
 
+/* ── Cheapest-config summary lines, shared by the app view and the Word report ── */
+function getCostSummaryLines(){
+  const cheapestOverall = allRuns.reduce((best,run)=> run.cost<best.cost?run:best, allRuns[0]);
+  const zeroFailRuns = allRuns.filter(run=>run.summary.notMet===0);
+  const cheapestReliable = zeroFailRuns.length
+    ? zeroFailRuns.reduce((best,run)=> run.cost<best.cost?run:best, zeroFailRuns[0])
+    : null;
+  return [
+    cheapestReliable
+      ? `Cheapest system with 0 not-met days: ${cheapestReliable.pv}W / ${cheapestReliable.batt}Wh — $${Math.round(cheapestReliable.cost).toLocaleString()}`
+      : `No simulated configuration achieved 0 not-met days.`,
+    `Cheapest simulated system: ${cheapestOverall.pv}W / ${cheapestOverall.batt}Wh — $${Math.round(cheapestOverall.cost).toLocaleString()} (${cheapestOverall.summary.notMet} not-met day${cheapestOverall.summary.notMet===1?'':'s'})`
+  ];
+}
+
 /* ── Render: cost vs. not-met-days scatter plot ── */
 function renderScatter(){
+  const summaryEl = document.getElementById('scatter-summary');
+  if(summaryEl) summaryEl.innerHTML = getCostSummaryLines().join('<br>');
+
   const W=640, H=380, M={l:64,r:20,t:20,b:50};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
@@ -1078,6 +1097,8 @@ function downloadWordReport(){
   const notMetRows = buildMatrixRows(run => String(run.summary.notMet));
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
 
+  const summaryLines = getCostSummaryLines();
+
   const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033
 {\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}
 \\paperw12240\\paperh15840\\margl700\\margr700\\margt600\\margb600
@@ -1095,6 +1116,8 @@ ${notMetRows}
 ${costRows}
 \\pard\\par
 \\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
+\\pard\\qc ${esc(summaryLines[0])}\\par
+\\pard\\qc ${esc(summaryLines[1])}\\par
 \\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
 }`;
 
