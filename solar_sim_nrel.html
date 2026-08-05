@@ -29,6 +29,9 @@
   .field label{font-size:12px;color:rgba(255,255,255,.6);font-weight:500;}
   .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:13px;transition:border-color .2s;outline:none;width:100%;}
   .field input:focus,.field select:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
+  .field input[type=range]{accent-color:var(--sun);background:transparent;border:none;padding:0;height:24px;}
+  .sticky-controls{position:sticky;top:0;z-index:20;background:var(--night);padding:14px 18px;margin:0 -18px 18px;border-bottom:1px solid rgba(245,166,35,.25);}
+  .sticky-chart-card{position:sticky;top:var(--controls-h,96px);z-index:15;background:linear-gradient(rgba(255,255,255,.04),rgba(255,255,255,.04)),var(--night);}
   .field select option{background:#1E3A5F;}
   .field .hint{font-size:11px;color:rgba(255,255,255,.3);}
 
@@ -166,11 +169,6 @@
         <input type="number" id="night-load" value="300" min="0" step="10">
         <span class="hint">Drawn from battery after sunset</span>
       </div>
-      <div class="field">
-        <label>Acceptable unmet energy on cloudy days (%)</label>
-        <input type="number" id="unmet-tolerance" value="10" min="0" max="100" step="1">
-        <span class="hint">Days below this shortfall count as success; above it, Failed</span>
-      </div>
     </div>
   </div>
 
@@ -213,12 +211,19 @@
     </div>
   </div>
 
-  <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
+  <div class="sticky-controls">
+    <div class="field">
+      <label>Acceptable unmet energy on cloudy days: <span id="unmet-tolerance-val" style="color:var(--sun);font-family:'Space Mono',monospace;">10%</span></label>
+      <input type="range" id="unmet-tolerance" min="0" max="50" step="5" value="10">
+      <span class="hint">Days below this shortfall count as success; above it, Failed</span>
+    </div>
+    <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
+  </div>
   <div id="status"></div>
   <div id="error-msg"></div>
 
   <div id="results">
-    <div class="card">
+    <div class="card sticky-chart-card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <span>📈 Cost vs. Not-Met Days</span>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -327,10 +332,25 @@ function saveConfig(){
   });
   try{ localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data)); }catch(e){ /* storage unavailable — not fatal */ }
 }
+const unmetToleranceEl = document.getElementById('unmet-tolerance');
+const unmetToleranceValEl = document.getElementById('unmet-tolerance-val');
+const updateUnmetToleranceLabel = () => { unmetToleranceValEl.textContent = `${unmetToleranceEl.value}%`; };
+updateUnmetToleranceLabel();
+unmetToleranceEl.addEventListener('input', updateUnmetToleranceLabel);
+
 CONFIG_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', saveConfig);
 });
+
+/* ── Keep the sticky chart card pinned right below the sticky controls bar, whatever height it renders at ── */
+function updateStickyOffset(){
+  const controls = document.querySelector('.sticky-controls');
+  if(controls) document.documentElement.style.setProperty('--controls-h', controls.offsetHeight+'px');
+}
+window.addEventListener('resize', updateStickyOffset);
+if(document.fonts && document.fonts.ready) document.fonts.ready.then(updateStickyOffset);
+updateStickyOffset();
 
 /* ── Keep the visible "current report name" label in sync with the hidden #report-name field ── */
 function updateReportNameDisplay(){
