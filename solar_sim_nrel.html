@@ -16,7 +16,7 @@
   header{background:linear-gradient(135deg,var(--night),var(--dusk));border-bottom:1px solid rgba(245,166,35,.25);padding:22px 32px;display:flex;align-items:center;gap:16px;}
   .sun-icon{width:40px;height:40px;background:var(--sun);border-radius:50%;box-shadow:0 0 0 7px rgba(245,166,35,.15),0 0 0 14px rgba(245,166,35,.06);flex-shrink:0;}
   header h1{font-size:20px;font-weight:700;letter-spacing:-.3px;}
-  header p{font-size:12px;color:rgba(255,255,255,.45);margin-top:2px;}
+  header p{font-size:12px;color:rgba(255,255,255,.64);margin-top:2px;}
   .badge{margin-left:auto;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--sun);font-weight:600;white-space:nowrap;}
 
   .app{max-width:920px;margin:0 auto;padding:28px 18px 60px;}
@@ -26,14 +26,13 @@
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media(max-width:580px){.fields{grid-template-columns:1fr;}}
   .field{display:flex;flex-direction:column;gap:5px;}
-  .field label{font-size:12px;color:rgba(255,255,255,.6);font-weight:500;}
+  .field label{font-size:12px;color:rgba(255,255,255,.7);font-weight:500;}
   .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:13px;transition:border-color .2s;outline:none;width:100%;}
   .field input:focus,.field select:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .field input[type=range]{accent-color:var(--sun);background:transparent;border:none;padding:0;height:24px;}
-  .sticky-controls{position:sticky;top:0;z-index:20;background:var(--night);padding:14px 18px;margin:0 -18px 18px;border-bottom:1px solid rgba(245,166,35,.25);}
-  .sticky-chart-card{position:sticky;top:var(--controls-h,96px);z-index:15;background:linear-gradient(rgba(255,255,255,.04),rgba(255,255,255,.04)),var(--night);}
+  .run-controls-bar{background:var(--night);padding:14px 18px;margin:0 -18px 18px;border-bottom:1px solid rgba(245,166,35,.25);}
   .field select option{background:#1E3A5F;}
-  .field .hint{font-size:11px;color:rgba(255,255,255,.3);}
+  .field .hint{font-size:11px;color:rgba(255,255,255,.54);}
 
   .sys-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
   @media(max-width:560px){.sys-grid{grid-template-columns:repeat(2,1fr);}}
@@ -41,16 +40,16 @@
   .sys-opt.clickable{cursor:pointer;}
   .sys-opt.clickable:hover{border-color:var(--sun);background:rgba(245,166,35,.07);}
   .sys-opt.active{border-color:var(--sun);background:rgba(245,166,35,.14);}
-  .sys-tag{font-size:10px;color:rgba(255,255,255,.45);margin-bottom:4px;}
+  .sys-tag{font-size:10px;color:rgba(255,255,255,.64);margin-bottom:4px;}
   .sys-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--sun);}
-  .sys-sub{font-size:10px;color:rgba(255,255,255,.35);margin-top:4px;}
-  .sys-note{font-size:12px;color:rgba(255,255,255,.4);margin-bottom:14px;line-height:1.6;}
+  .sys-sub{font-size:10px;color:rgba(255,255,255,.57);margin-top:4px;}
+  .sys-note{font-size:12px;color:rgba(255,255,255,.61);margin-bottom:14px;line-height:1.6;}
 
   .btn-run{width:100%;margin-top:6px;padding:14px;background:var(--sun);color:var(--night);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;}
   .btn-run:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
   .btn-run:disabled{opacity:.4;cursor:not-allowed;}
 
-  #status{display:none;text-align:center;padding:16px;font-size:13px;color:rgba(255,255,255,.5);}
+  #status{display:none;text-align:center;padding:16px;font-size:13px;color:rgba(255,255,255,.67);}
   .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:13px;color:#E74C3C;margin-top:10px;line-height:1.6;}
@@ -61,25 +60,25 @@
   .score-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:16px 12px;text-align:center;}
   .score-box.hl{border-color:var(--sun);background:rgba(245,166,35,.1);}
   .sc-num{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;line-height:1;}
-  .sc-unit{font-size:12px;color:rgba(255,255,255,.4);margin-top:3px;}
-  .sc-label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.35);margin-top:7px;}
+  .sc-unit{font-size:12px;color:rgba(255,255,255,.61);margin-top:3px;}
+  .sc-label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.57);margin-top:7px;}
   .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);} .cs{color:var(--sun);}
 
   .cal-wrap{overflow-x:auto;}
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
-  .cal-hdr{font-size:8px;color:rgba(255,255,255,.28);text-align:center;padding:2px 0;}
-  .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.38);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+  .cal-hdr{font-size:8px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
+  .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
   .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
   .cal-cell.met{background:var(--good);opacity:.82;}
   .cal-cell.fail{background:var(--bad);opacity:.72;}
   .cal-cell.empty{background:transparent;}
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
-  .cal-legend span{font-size:11px;color:rgba(255,255,255,.45);display:flex;align-items:center;gap:5px;}
+  .cal-legend span{font-size:11px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
   .leg-met::before{background:var(--good);} .leg-fail::before{background:var(--bad);}
 
   .mtbl{width:100%;border-collapse:collapse;font-size:13px;}
-  .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.3);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
+  .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.54);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
   .mtbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);}
   .mtbl tr:last-child td{border-bottom:none;}
   .mtbl tr[data-idx]{cursor:pointer;}
@@ -87,12 +86,12 @@
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
   .bar-wrap{width:100%;background:rgba(255,255,255,.07);border-radius:4px;height:6px;overflow:hidden;}
   .bar-fill{height:100%;border-radius:4px;}
-  .src-note{font-size:11px;color:rgba(255,255,255,.3);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
+  .src-note{font-size:11px;color:rgba(255,255,255,.54);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:14px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
-  .cmp-hint{font-size:11px;color:rgba(255,255,255,.3);margin-top:10px;}
+  .cmp-hint{font-size:11px;color:rgba(255,255,255,.54);margin-top:10px;}
   .matrix-tbl{table-layout:fixed;min-width:100%;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
@@ -102,7 +101,7 @@
   .scatter-dot{cursor:pointer;transition:r .12s;}
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
   .modal-card{background:var(--night);border:1px solid rgba(245,166,35,.3);border-radius:16px;padding:26px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;}
-  .modal-close{background:none;border:none;color:rgba(255,255,255,.5);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;}
+  .modal-close{background:none;border:none;color:rgba(255,255,255,.67);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;}
   .modal-close:hover{color:var(--white);}
   .hist-bar{cursor:default;}
   .scatter-dot:hover{stroke:var(--sun);stroke-width:2;}
@@ -211,7 +210,7 @@
     </div>
   </div>
 
-  <div class="sticky-controls">
+  <div class="run-controls-bar" id="run-controls">
     <div class="field">
       <label>Acceptable unmet energy on cloudy days: <span id="unmet-tolerance-val" style="color:var(--sun);font-family:'Space Mono',monospace;">10%</span></label>
       <input type="range" id="unmet-tolerance" min="0" max="50" step="5" value="10">
@@ -223,7 +222,7 @@
   <div id="error-msg"></div>
 
   <div id="results">
-    <div class="card sticky-chart-card" id="chart-card">
+    <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
         <span>📈 Cost vs. Not-Met Days</span>
         <div style="display:flex;align-items:center;gap:10px;">
@@ -235,6 +234,11 @@
       <p id="scatter-summary" style="font-size:13px;margin:0 0 8px;"></p>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">💵 Cost of cheapest system with no unmet days</div>
+      <div class="cal-wrap"><svg id="tolerance-cost-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
+      <p class="cmp-hint">For each tolerance value (0–50%, independent of the slider above), the cost of the cheapest simulated config with 0 not-met days at that tolerance. "n/a" means no simulated config was fully reliable at that tolerance.</p>
     </div>
     <div class="card">
       <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
@@ -342,15 +346,6 @@ CONFIG_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', saveConfig);
 });
-
-/* ── Keep the sticky chart card pinned right below the sticky controls bar, whatever height it renders at ── */
-function updateStickyOffset(){
-  const controls = document.querySelector('.sticky-controls');
-  if(controls) document.documentElement.style.setProperty('--controls-h', controls.offsetHeight+'px');
-}
-window.addEventListener('resize', updateStickyOffset);
-if(document.fonts && document.fonts.ready) document.fonts.ready.then(updateStickyOffset);
-updateStickyOffset();
 
 /* ── Keep the visible "current report name" label in sync with the hidden #report-name field ── */
 function updateReportNameDisplay(){
@@ -767,12 +762,12 @@ function showHistogram(run){
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">${t}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
 
   bins.forEach((count,i)=>{
     const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
@@ -781,8 +776,8 @@ function showHistogram(run){
     const lo = Math.round(i*BIN_WIDTH), hi = Math.round((i+1)*BIN_WIDTH);
     const fill = lo>=40 ? 'var(--bad)' : lo>=10 ? 'var(--warn)' : 'var(--good)';
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" fill-opacity=".85"><title>${lo}–${hi}%: ${count} day${count===1?'':'s'}</title></rect>`;
-    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.6)" font-family="'Space Mono',monospace">${count}</text>`;
-    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.4)" font-family="'Space Mono',monospace">${lo}</text>`;
+    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
   });
 
   document.getElementById('histogram-title').textContent = `📊 Unmet Energy Distribution — ${run.pv} W / ${run.batt} Wh`;
@@ -791,22 +786,13 @@ function showHistogram(run){
   document.getElementById('histogram-modal').style.display = 'flex';
 }
 
-/* ── Histogram: days by daily PV production (kWh), for one config ── */
-function showProductionHistogram(run){
+/* ── Histogram: days by daily unmet energy (kWh), for one config ── */
+function showUnmetKwhHistogram(run){
   const W=640, H=380, M={l:56,r:20,t:20,b:56};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
-  const dailyKwh = [];
-  let curKey=null, sumWh=0;
-  run.hourlyLog.forEach(r=>{
-    const key = `${r.month}-${r.day}`;
-    if(key!==curKey){
-      if(curKey!==null) dailyKwh.push(sumWh/1000);
-      curKey=key; sumWh=0;
-    }
-    sumWh += r.pv;
-  });
-  if(curKey!==null) dailyKwh.push(sumWh/1000);
+  const dailyTotalWh = run.dayWh+run.nightWh;
+  const dailyKwh = run.results.map(r => (1-r.frac)*dailyTotalWh/1000);
 
   const BIN_COUNT=10;
   const maxKwh = Math.max(...dailyKwh, 0);
@@ -829,12 +815,12 @@ function showProductionHistogram(run){
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">${t}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif">Daily PV production (kWh)</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Daily unmet energy (kWh)</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
 
   bins.forEach((count,i)=>{
     const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
@@ -842,12 +828,12 @@ function showProductionHistogram(run){
     const h = M.t+plotH-y;
     const lo = (i*BIN_WIDTH).toFixed(1), hi = ((i+1)*BIN_WIDTH).toFixed(1);
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="var(--sun)" fill-opacity=".85"><title>${lo}–${hi} kWh: ${count} day${count===1?'':'s'}</title></rect>`;
-    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.6)" font-family="'Space Mono',monospace">${count}</text>`;
-    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.4)" font-family="'Space Mono',monospace">${lo}</text>`;
+    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
   });
 
-  document.getElementById('histogram-title').textContent = `☀️ Daily PV Production — ${run.pv} W / ${run.batt} Wh`;
-  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily PV output in kWh; height is the number of days that fell in that range.';
+  document.getElementById('histogram-title').textContent = `🔻 Daily Unmet Energy — ${run.pv} W / ${run.batt} Wh`;
+  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily unmet energy in kWh; height is the number of days that fell in that range.';
   document.getElementById('histogram-chart').innerHTML = svg;
   document.getElementById('histogram-modal').style.display = 'flex';
 }
@@ -884,7 +870,7 @@ function renderComparison(){
         <td class="cb" style="font-weight:700">${s.notMet}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
-        <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn hist-btn" data-idx="${i}" type="button">📊 Histogram</button><button class="csv-btn prod-hist-btn" data-idx="${i}" type="button">☀️ PV Histogram</button></div></td>
+        <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn hist-btn" data-idx="${i}" type="button">📊 Histogram</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
       </tr>`;
     }).join('') + '</tbody>';
 
@@ -898,7 +884,7 @@ function renderComparison(){
       renderDetail();
     });
   });
-  tbl.querySelectorAll('.csv-btn:not(.hist-btn):not(.prod-hist-btn)').forEach(btn=>{
+  tbl.querySelectorAll('.csv-btn:not(.hist-btn):not(.unmet-kwh-hist-btn)').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       exportHourlyCSV(allRuns[+btn.dataset.idx]);
@@ -910,10 +896,10 @@ function renderComparison(){
       showHistogram(allRuns[+btn.dataset.idx]);
     });
   });
-  tbl.querySelectorAll('.prod-hist-btn').forEach(btn=>{
+  tbl.querySelectorAll('.unmet-kwh-hist-btn').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
-      showProductionHistogram(allRuns[+btn.dataset.idx]);
+      showUnmetKwhHistogram(allRuns[+btn.dataset.idx]);
     });
   });
 }
@@ -1007,6 +993,72 @@ function getCostSummaryLines(){
   ];
 }
 
+/* ── Cost of the cheapest config with 0 not-met days, swept across tolerance values ──
+   Re-classifies each run's already-simulated per-day fracs at a hypothetical tolerance,
+   rather than re-running simulate(), since frac doesn't depend on tolerance. ── */
+const TOLERANCE_SWEEP = Array.from({length:11}, (_,i)=> i*5); // 0,5,10,...,50
+
+function cheapestZeroFailCostAtTolerance(tolerancePct){
+  const tol = tolerancePct/100;
+  let best = null;
+  allRuns.forEach(run=>{
+    const notMet = run.results.filter(r => (1-r.frac) > tol+1e-9).length;
+    if(notMet===0 && (best===null || run.cost<best.cost)) best = run;
+  });
+  return best ? best.cost : null;
+}
+
+function renderToleranceCostChart(){
+  const W=640, H=380, M={l:70,r:20,t:20,b:50};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const points = TOLERANCE_SWEEP.map(pct => ({pct, cost: cheapestZeroFailCostAtTolerance(pct)}));
+  const known = points.filter(p=>p.cost!==null);
+  const yMinRaw = known.length ? Math.min(...known.map(p=>p.cost)) : 0;
+  const yMaxRaw = known.length ? Math.max(...known.map(p=>p.cost)) : 1;
+  const yPad = Math.max((yMaxRaw-yMinRaw)*0.15, yMaxRaw*0.05, 20);
+  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
+  const yHi = Math.ceil(yMaxRaw+yPad);
+
+  const xScale = i => M.l + (i/(TOLERANCE_SWEEP.length-1))*plotW;
+  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
+
+  let svg = '';
+  TOLERANCE_SWEEP.forEach((t,i)=>{
+    const x=xScale(i);
+    svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
+    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}%</text>`;
+  });
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
+  });
+  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Acceptable unmet energy tolerance</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Cost of cheapest 0-not-met-day system ($)</text>`;
+
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i], b=points[i+1];
+    if(a.cost!==null && b.cost!==null){
+      svg += `<line x1="${xScale(i)}" y1="${yScale(a.cost)}" x2="${xScale(i+1)}" y2="${yScale(b.cost)}" stroke="var(--sun)" stroke-width="2"/>`;
+    }
+  }
+  points.forEach((p,i)=>{
+    const x=xScale(i);
+    if(p.cost===null){
+      svg += `<text x="${x}" y="${M.t+plotH/2}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.57)" font-family="'Space Mono',monospace">n/a</text>`;
+      return;
+    }
+    const y=yScale(p.cost);
+    svg += `<circle cx="${x}" cy="${y}" r="5" fill="var(--sun)"><title>${p.pct}% tolerance — $${Math.round(p.cost).toLocaleString()}</title></circle>`;
+  });
+
+  document.getElementById('tolerance-cost-chart').innerHTML = svg;
+}
+
 /* ── Render: cost vs. not-met-days scatter plot ── */
 function renderScatter(){
   const summaryEl = document.getElementById('scatter-summary');
@@ -1033,17 +1085,17 @@ function renderScatter(){
   xTicks.forEach(t=>{
     const x=xScale(t);
     svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">${t}</text>`;
+    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
   });
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.45)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif">Not-met days / year</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.5)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Not-met days / year</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
   allRuns.forEach((run,i)=>{
     const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
@@ -1124,6 +1176,68 @@ function buildReportScatterCanvas(){
   return canvas;
 }
 
+function buildReportToleranceCanvas(){
+  const W=900, H=460, M={l:90,r:30,t:30,b:60};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const points = TOLERANCE_SWEEP.map(pct => ({pct, cost: cheapestZeroFailCostAtTolerance(pct)}));
+  const known = points.filter(p=>p.cost!==null);
+  const yMinRaw = known.length ? Math.min(...known.map(p=>p.cost)) : 0;
+  const yMaxRaw = known.length ? Math.max(...known.map(p=>p.cost)) : 1;
+  const yPad = Math.max((yMaxRaw-yMinRaw)*0.15, yMaxRaw*0.05, 20);
+  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
+  const yHi = Math.ceil(yMaxRaw+yPad);
+  const xScale = i => M.l + (i/(TOLERANCE_SWEEP.length-1))*plotW;
+  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.font = '12px Arial';
+  TOLERANCE_SWEEP.forEach((t,i)=>{
+    const x=xScale(i);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t+'%', x, M.t+plotH+20);
+  });
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='right'; ctx.fillText('$'+t.toLocaleString(), M.l-10, y+4);
+  });
+  ctx.strokeStyle='#333333';
+  ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
+
+  ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
+  ctx.fillText('Acceptable unmet energy tolerance', M.l+plotW/2, H-14);
+  ctx.save();
+  ctx.translate(24, M.t+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Cost of cheapest 0-not-met-day system ($)', 0, 0);
+  ctx.restore();
+
+  ctx.strokeStyle='#F5A623'; ctx.lineWidth=2.5;
+  for(let i=0;i<points.length-1;i++){
+    const a=points[i], b=points[i+1];
+    if(a.cost!==null && b.cost!==null){
+      ctx.beginPath(); ctx.moveTo(xScale(i),yScale(a.cost)); ctx.lineTo(xScale(i+1),yScale(b.cost)); ctx.stroke();
+    }
+  }
+  points.forEach((p,i)=>{
+    const x=xScale(i);
+    if(p.cost===null){
+      ctx.fillStyle='#999999'; ctx.textAlign='center'; ctx.font='11px Arial';
+      ctx.fillText('n/a', x, M.t+plotH/2);
+      return;
+    }
+    ctx.beginPath(); ctx.arc(x,yScale(p.cost),6,0,Math.PI*2);
+    ctx.fillStyle='#F5A623'; ctx.fill();
+  });
+
+  return canvas;
+}
+
 function base64ToHex(b64){
   const raw = atob(b64);
   let hex = '';
@@ -1160,6 +1274,11 @@ function downloadWordReport(){
   const pngHex = base64ToHex(canvas.toDataURL('image/png').split(',')[1]);
   const picWgoal = Math.round(6.2*1440);
   const picHgoal = Math.round(picWgoal * canvas.height / canvas.width);
+
+  const toleranceCanvas = buildReportToleranceCanvas();
+  const tolerancePngHex = base64ToHex(toleranceCanvas.toDataURL('image/png').split(',')[1]);
+  const tolerancePicWgoal = Math.round(6.2*1440);
+  const tolerancePicHgoal = Math.round(tolerancePicWgoal * toleranceCanvas.height / toleranceCanvas.width);
 
   const esc = s => String(s).replace(/[\\{}]/g,c=>'\\'+c).replace(/[^\x00-\x7F]/g,c=>'\\u'+c.charCodeAt(0)+'?');
 
@@ -1218,6 +1337,9 @@ ${costRows}
 \\pard\\qc ${esc(summaryLines[0])}\\par
 \\pard\\qc ${esc(summaryLines[1])}\\par
 \\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
+\\pard\\par
+\\pard\\keepn\\qc\\fs22\\b Cost of cheapest system with no unmet days\\b0\\fs20\\par
+\\pard\\keep\\qc{\\pict\\pngblip\\picw${toleranceCanvas.width}\\pich${toleranceCanvas.height}\\picwgoal${tolerancePicWgoal}\\pichgoal${tolerancePicHgoal} ${tolerancePngHex}}\\par
 }`;
 
   const blob = new Blob([rtf], {type:'application/rtf'});
@@ -1385,8 +1507,9 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     renderNotMetMatrix();
     renderCostMatrix();
     renderScatter();
+    renderToleranceCostChart();
     renderDetail();
-    document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
+    document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
     setErr(`<strong>Error:</strong> ${err.message}<br><br>
