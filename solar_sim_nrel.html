@@ -1295,19 +1295,19 @@ function downloadWordReport(){
 
   const canvas = buildReportScatterCanvas();
   const pngHex = base64ToHex(canvas.toDataURL('image/png').split(',')[1]);
-  const picWgoal = Math.round(6.2*1440);
+  const picWgoal = Math.round(5.7*1440);
   const picHgoal = Math.round(picWgoal * canvas.height / canvas.width);
 
   const toleranceCanvas = buildReportToleranceCanvas();
   const tolerancePngHex = base64ToHex(toleranceCanvas.toDataURL('image/png').split(',')[1]);
-  const tolerancePicWgoal = Math.round(6.2*1440);
+  const tolerancePicWgoal = Math.round(5.7*1440);
   const tolerancePicHgoal = Math.round(tolerancePicWgoal * toleranceCanvas.height / toleranceCanvas.width);
 
   const esc = s => String(s).replace(/[\\{}]/g,c=>'\\'+c).replace(/[^\x00-\x7F]/g,c=>'\\u'+c.charCodeAt(0)+'?');
 
   let rows = '';
   inputs.forEach(([label,val])=>{
-    rows += `\\trowd\\trgaph108\\trleft0\\cellx2600\\cellx9500\n`
+    rows += `\\trowd\\trgaph60\\trleft0\\cellx2600\\cellx9500\n`
           + `\\pard\\intbl\\b ${esc(label)}\\b0\\cell\n`
           + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
   });
@@ -1350,19 +1350,19 @@ function downloadWordReport(){
 \\pard\\fs24\\b Inputs\\b0\\fs20\\par
 ${rows}
 \\pard\\par
+\\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
+\\pard\\qc ${esc(summaryLines[0])}\\par
+\\pard\\qc ${esc(summaryLines[1])}\\par
+\\pard\\qc ${esc(summaryLines[2])}\\par
+\\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
+\\pard\\keepn\\qc\\fs22\\b Cost of cheapest system with no unmet days\\b0\\fs20\\par
+\\pard\\keep\\qc{\\pict\\pngblip\\picw${toleranceCanvas.width}\\pich${toleranceCanvas.height}\\picwgoal${tolerancePicWgoal}\\pichgoal${tolerancePicHgoal} ${tolerancePngHex}}\\par
+\\page
 \\pard\\fs24\\b Not-Met Days Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
 ${notMetRows}
 \\pard\\par
 \\pard\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
 ${costRows}
-\\pard\\par
-\\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
-\\pard\\qc ${esc(summaryLines[0])}\\par
-\\pard\\qc ${esc(summaryLines[1])}\\par
-\\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
-\\pard\\par
-\\pard\\keepn\\qc\\fs22\\b Cost of cheapest system with no unmet days\\b0\\fs20\\par
-\\pard\\keep\\qc{\\pict\\pngblip\\picw${toleranceCanvas.width}\\pich${toleranceCanvas.height}\\picwgoal${tolerancePicWgoal}\\pichgoal${tolerancePicHgoal} ${tolerancePngHex}}\\par
 }`;
 
   const blob = new Blob([rtf], {type:'application/rtf'});
