@@ -346,6 +346,7 @@ const unmetToleranceValEl = document.getElementById('unmet-tolerance-val');
 const updateUnmetToleranceLabel = () => { unmetToleranceValEl.textContent = `${unmetToleranceEl.value}%`; };
 updateUnmetToleranceLabel();
 unmetToleranceEl.addEventListener('input', updateUnmetToleranceLabel);
+unmetToleranceEl.addEventListener('change', ()=>{ if(allRuns) runSimulation({scroll:false}); });
 
 document.getElementById('max-notmet-days').addEventListener('input', ()=>{ if(allRuns) renderScatter(); });
 
@@ -1461,7 +1462,7 @@ function renderDetail(){
 }
 
 /* ── Main ── */
-document.getElementById('btn-run').addEventListener('click',async()=>{
+async function runSimulation({scroll=true}={}){
   setErr(''); document.getElementById('results').style.display='none';
   const lat=parseFloat(document.getElementById('lat').value);
   const lon=parseFloat(document.getElementById('lon').value);
@@ -1528,7 +1529,7 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
     renderScatter();
     renderToleranceCostChart();
     renderDetail();
-    document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
+    if(scroll) document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
     setErr(`<strong>Error:</strong> ${err.message}<br><br>
@@ -1537,7 +1538,8 @@ document.getElementById('btn-run').addEventListener('click',async()=>{
       NLR servers busy; invalid API key.`);
     console.error(err);
   }finally{btn.disabled=false;}
-});
+}
+document.getElementById('btn-run').addEventListener('click', ()=>runSimulation());
 </script>
 </body>
 </html>
