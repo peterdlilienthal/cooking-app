@@ -802,13 +802,14 @@ function showUnmetKwhHistogram(run){
   const dailyTotalWh = run.dayWh+run.nightWh;
   const dailyKwh = run.results.map(r => (1-r.frac)*dailyTotalWh/1000);
 
-  const BIN_COUNT=10;
+  const BIN_COUNT=10, BIN_START=0.001;
   const maxKwh = Math.max(...dailyKwh, 0);
   const binMax = maxKwh>0 ? Math.ceil(maxKwh*1.05*10)/10 : 1;
-  const BIN_WIDTH = binMax/BIN_COUNT;
+  const BIN_WIDTH = (binMax-BIN_START)/BIN_COUNT;
   const bins = new Array(BIN_COUNT).fill(0);
   dailyKwh.forEach(kwh=>{
-    const idx = Math.min(BIN_COUNT-1, Math.max(0, Math.floor(kwh/BIN_WIDTH)));
+    if(kwh<BIN_START) return;
+    const idx = Math.min(BIN_COUNT-1, Math.max(0, Math.floor((kwh-BIN_START)/BIN_WIDTH)));
     bins[idx]++;
   });
   const maxCount = Math.max(...bins, 1);
@@ -834,7 +835,7 @@ function showUnmetKwhHistogram(run){
     const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
     const y = yScale(count);
     const h = M.t+plotH-y;
-    const lo = (i*BIN_WIDTH).toFixed(2), hi = ((i+1)*BIN_WIDTH).toFixed(2);
+    const lo = (BIN_START+i*BIN_WIDTH).toFixed(2), hi = (BIN_START+(i+1)*BIN_WIDTH).toFixed(2);
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="var(--sun)" fill-opacity=".85"><title>${lo}–${hi} kWh: ${count} day${count===1?'':'s'}</title></rect>`;
     if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
     svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
