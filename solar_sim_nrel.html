@@ -994,10 +994,12 @@ function getCostSummaryLines(){
   const cheapestReliable = zeroFailRuns.length
     ? zeroFailRuns.reduce((best,run)=> run.cost<best.cost?run:best, zeroFailRuns[0])
     : null;
+  const highlighted = allRuns[activeCfgIdx];
   return [
     cheapestReliable
       ? `Cheapest system with 0 not-met days: ${cheapestReliable.pv}W / ${cheapestReliable.batt}Wh — $${Math.round(cheapestReliable.cost).toLocaleString()}`
       : `No simulated configuration achieved 0 not-met days.`,
+    `Highlighted system: ${highlighted.pv}W / ${highlighted.batt}Wh — $${Math.round(highlighted.cost).toLocaleString()} (${highlighted.summary.notMet} not-met day${highlighted.summary.notMet===1?'':'s'})`,
     `Cheapest simulated system: ${cheapestOverall.pv}W / ${cheapestOverall.batt}Wh — $${Math.round(cheapestOverall.cost).toLocaleString()} (${cheapestOverall.summary.notMet} not-met day${cheapestOverall.summary.notMet===1?'':'s'})`
   ];
 }
