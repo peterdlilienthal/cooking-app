@@ -1148,8 +1148,24 @@ function buildReportScatterCanvas(){
   const W=900, H=460, M={l:80,r:30,t:30,b:60};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
-  const xs = allRuns.map(r=>r.summary.notMet);
-  const ys = allRuns.map(r=>r.cost);
+  const maxNotMetRaw = parseFloat(document.getElementById('max-notmet-days').value);
+  const hasMaxNotMet = !isNaN(maxNotMetRaw) && maxNotMetRaw>=0;
+  const plotEntries = allRuns
+    .map((run,i)=>({run,i}))
+    .filter(e => !hasMaxNotMet || e.run.summary.notMet<=maxNotMetRaw);
+
+  if(!plotEntries.length){
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.font='13px Arial';
+    ctx.fillText(`No configs have ≤ ${maxNotMetRaw} not-met days`, W/2, H/2);
+    return canvas;
+  }
+
+  const xs = plotEntries.map(e=>e.run.summary.notMet);
+  const ys = plotEntries.map(e=>e.run.cost);
   const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
@@ -1186,7 +1202,7 @@ function buildReportScatterCanvas(){
   ctx.fillText('Total cost ($)', 0, 0);
   ctx.restore();
 
-  allRuns.forEach((run,i)=>{
+  plotEntries.forEach(({run,i})=>{
     const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
     const s=run.summary;
     const fill = s.pct>=80?'#27AE60':s.pct>=50?'#E67E22':'#C0392B';
