@@ -261,6 +261,11 @@
       <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
     </div>
     <div class="card">
+      <div class="card-title">🏆 Cost Frontier</div>
+      <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
+      <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to see its day-by-day detail below.</p>
+    </div>
+    <div class="card">
       <div class="card-title">⚖️ Configuration Comparison</div>
       <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
       <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
@@ -883,6 +888,45 @@ function computeFrontier(xVals, costs){
   ));
 }
 
+/* ── Render: cost-frontier table, most- to least-reliable, with marginal $/kWh ── */
+function renderFrontierTable(){
+  const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
+  const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(r=>r.cost));
+  const rows = allRuns
+    .map((run,i)=>({run,i,unmetKwh:unmetKwhByIdx[i]}))
+    .filter(e=>isFrontier[e.i])
+    .sort((a,b)=> b.run.cost-a.run.cost);
+
+  const tbl = document.getElementById('frontier-tbl');
+  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Cost</th><th>Unmet kWh/yr</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
+    rows.map((e,k)=>{
+      const {run,i,unmetKwh} = e;
+      const next = rows[k+1];
+      const marginal = next ? (run.cost-next.run.cost)/(next.unmetKwh-unmetKwh) : null;
+      const activeCls = i===activeCfgIdx ? ' active-row' : '';
+      return `<tr data-idx="${i}" class="${activeCls}">
+        <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
+        <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
+        <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
+        <td style="font-family:'Space Mono',monospace">${unmetKwh.toFixed(1)}</td>
+        <td style="font-family:'Space Mono',monospace">${marginal===null ? '—' : '$'+marginal.toFixed(2)}</td>
+      </tr>`;
+    }).join('') + '</tbody>';
+
+  tbl.querySelectorAll('tr[data-idx]').forEach(row=>{
+    row.addEventListener('click', ()=>{
+      activeCfgIdx = +row.dataset.idx;
+      renderFrontierTable();
+      renderComparison();
+      renderNotMetMatrix();
+      renderCostMatrix();
+      renderScatter();
+      renderUnmetKwhScatter();
+      renderDetail();
+    });
+  });
+}
+
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
@@ -907,6 +951,7 @@ function renderComparison(){
   tbl.querySelectorAll('tr[data-idx]').forEach(row=>{
     row.addEventListener('click', ()=>{
       activeCfgIdx = +row.dataset.idx;
+      renderFrontierTable();
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
@@ -961,6 +1006,7 @@ function renderNotMetMatrix(){
   tbl.querySelectorAll('.matrix-cell').forEach(td=>{
     td.addEventListener('click', ()=>{
       activeCfgIdx = +td.dataset.idx;
+      renderFrontierTable();
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
@@ -1001,6 +1047,7 @@ function renderCostMatrix(){
   tbl.querySelectorAll('.matrix-cell').forEach(td=>{
     td.addEventListener('click', ()=>{
       activeCfgIdx = +td.dataset.idx;
+      renderFrontierTable();
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
@@ -1160,6 +1207,7 @@ function renderScatter(){
   svgEl.querySelectorAll('.scatter-dot').forEach(dot=>{
     dot.addEventListener('click', ()=>{
       activeCfgIdx = +dot.dataset.idx;
+      renderFrontierTable();
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
@@ -1224,6 +1272,7 @@ function renderUnmetKwhScatter(){
   svgEl.querySelectorAll('.unmet-kwh-scatter-dot').forEach(dot=>{
     dot.addEventListener('click', ()=>{
       activeCfgIdx = +dot.dataset.idx;
+      renderFrontierTable();
       renderComparison();
       renderNotMetMatrix();
       renderCostMatrix();
@@ -1633,6 +1682,7 @@ async function runSimulation({scroll=true}={}){
 
     setSt('');
     document.getElementById('results').style.display='block';
+    renderFrontierTable();
     renderComparison();
     renderNotMetMatrix();
     renderCostMatrix();
