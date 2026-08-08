@@ -238,12 +238,12 @@
       </div>
       <p id="scatter-summary" style="font-size:13px;margin:0 0 8px;"></p>
       <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Gold dots have no other config that's both cheaper and lower in not-met days; green dots are dominated by at least one such config. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
     </div>
     <div class="card">
       <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
       <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Click a dot to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Gold dots have no other config that's both cheaper and lower in unmet kWh; green dots are dominated by at least one such config. Click a dot to see its day-by-day detail below.</p>
     </div>
     <div class="card">
       <div class="card-title">💵 Cost of cheapest system with no unmet days</div>
@@ -874,6 +874,15 @@ function computeTotalUnmetKwh(run){
   return run.results.reduce((sum,r)=> sum+(1-r.frac)*dailyTotalWh/1000, 0);
 }
 
+/* ── Which configs are on the cost/x-metric frontier — no other config is at least as
+   good on both cost and x, and strictly better on at least one. Ties resolve in favor
+   of the lower-x config (a tied cost with higher x is dominated). ── */
+function computeFrontier(xVals, costs){
+  return xVals.map((x,i)=> !xVals.some((ox,j)=> j!==i &&
+    costs[j]<=costs[i] && ox<=x && (costs[j]<costs[i] || ox<x)
+  ));
+}
+
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
@@ -1105,6 +1114,8 @@ function renderScatter(){
     return;
   }
 
+  const frontierAll = computeFrontier(allRuns.map(r=>r.summary.notMet), allRuns.map(r=>r.cost));
+
   const xs = plotEntries.map(e=>e.run.summary.notMet);
   const ys = plotEntries.map(e=>e.run.cost);
   const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
@@ -1138,7 +1149,7 @@ function renderScatter(){
   plotEntries.forEach(({run,i})=>{
     const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
     const s=run.summary;
-    const fill = s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
+    const fill = frontierAll[i] ? 'var(--sun)' : 'var(--good)';
     const isActive = i===activeCfgIdx;
     const r = isActive?8:6;
     svg += `<circle class="scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${s.notMet} not-met days, $${Math.round(run.cost).toLocaleString()}</title></circle>`;
@@ -1164,7 +1175,10 @@ function renderUnmetKwhScatter(){
   const W=640, H=380, M={l:64,r:20,t:20,b:50};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
-  const xs = allRuns.map(run=>computeTotalUnmetKwh(run));
+  const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
+  const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
+
+  const xs = unmetKwhByIdx;
   const ys = allRuns.map(run=>run.cost);
   const xMaxRaw = Math.max(...xs);
   const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
@@ -1196,13 +1210,13 @@ function renderUnmetKwhScatter(){
   svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
   allRuns.forEach((run,i)=>{
-    const unmetKwh = computeTotalUnmetKwh(run);
+    const unmetKwh = unmetKwhByIdx[i];
     const cx=xScale(unmetKwh), cy=yScale(run.cost);
-    const s=run.summary;
-    const fill = s.pct>=80?'var(--good)':s.pct>=50?'var(--warn)':'var(--bad)';
+    const fill = isFrontier[i] ? 'var(--sun)' : 'var(--good)';
     const isActive = i===activeCfgIdx;
-    const r = isActive?8:6;
-    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${unmetKwh.toFixed(1)} unmet kWh/yr, $${Math.round(run.cost).toLocaleString()}</title></circle>`;
+    const r = isActive?6:4;
+    const frontierNote = isFrontier[i] ? ' (no cheaper system has lower unmet kWh, and no lower-unmet-kWh system is cheaper)' : '';
+    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${unmetKwh.toFixed(1)} unmet kWh/yr, $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
   });
 
   const svgEl = document.getElementById('unmet-kwh-scatter-chart');
