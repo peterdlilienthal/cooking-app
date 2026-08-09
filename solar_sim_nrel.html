@@ -1271,6 +1271,7 @@ function downloadWordReport(){
     return out;
   };
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
+  const unmetKwhRows = buildMatrixRows(run => computeTotalUnmetKwh(run).toFixed(1));
 
   // Highlighted configuration
   const activeRun = allRuns[activeCfgIdx];
@@ -1315,6 +1316,9 @@ ${rows}
 \\pard\\par
 \\pard\\keepn\\fs24\\b Highlighted Configuration\\b0\\fs20\\par
 ${configRows}
+\\pard\\par
+\\pard\\keepn\\fs24\\b Unmet kWh/Year Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
+${unmetKwhRows}
 \\pard\\par
 \\pard\\keepn\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
 ${costRows}
