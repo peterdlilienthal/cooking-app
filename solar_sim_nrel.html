@@ -50,8 +50,8 @@
   .btn-run:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
   .btn-run:disabled{opacity:.4;cursor:not-allowed;}
 
-  #status{display:none;text-align:center;padding:16px;font-size:13px;color:rgba(255,255,255,.67);}
-  .spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
+  #status{display:none;position:sticky;top:0;z-index:20;text-align:center;padding:16px;font-size:13px;font-weight:600;color:var(--white);background:var(--night);border-bottom:2px solid var(--sun);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  .spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
   #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:13px;color:#E74C3C;margin-top:10px;line-height:1.6;}
   #results{display:none;}
@@ -149,6 +149,12 @@
     <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
   </div>
 
+  <div class="run-controls-bar" id="run-controls">
+    <button class="btn-run" id="btn-run">Fetch solar resource data</button>
+  </div>
+  <div id="status"></div>
+  <div id="error-msg"></div>
+
   <div class="card">
     <div class="card-title">💰 System Cost</div>
     <div class="fields">
@@ -176,7 +182,7 @@
       <div class="field">
         <label>Daytime energy need (Wh)</label>
         <input type="number" id="day-load" value="500" min="0" step="10">
-        <span class="hint">Served directly from panels</span>
+        <span class="hint">Served during daylight hours</span>
       </div>
       <div class="field">
         <label>Night-time energy need (Wh)</label>
@@ -204,12 +210,6 @@
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
-  <div class="run-controls-bar" id="run-controls">
-    <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
-  </div>
-  <div id="status"></div>
-  <div id="error-msg"></div>
-
   <div id="results">
     <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -220,7 +220,7 @@
           <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
         </div>
       </div>
-      <p class="cmp-hint">Downloads a .doc report with your inputs and the Total Cost Matrix.</p>
+      <p class="cmp-hint">Downloads a .doc report with your inputs, the Cost vs. Unmet kWh/Year chart, the Day-by-Day Calendar, the highlighted configuration's cost and unmet kWh/year, and both the Unmet kWh/Year and Total Cost matrices.</p>
     </div>
     <div class="card">
       <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
@@ -296,6 +296,7 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
 let activeCfgIdx = 0;    // which config is highlighted across the charts and tables (defaults to lowest-unmet-kWh after a run)
 let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,interval} for the last-fetched location — avoids re-hitting NLR when only load/PV/battery/cost inputs change
+let nlrFetch = null;     // {lat,lon,promise} for a fetch currently in flight (started by the Fetch button), so Enter-triggered simulation can wait on it instead of racing a duplicate request
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
@@ -512,7 +513,7 @@ function updateComboPreview(){
 ['pv-sizes','batt-sizes'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
 updateComboPreview();
 
-const setSt=(msg)=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`<span class="spinner"></span>${msg}`:'';}
+const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
 
 const PROXY_DOWN_MSG = 'Could not reach the local proxy. Make sure nlr_proxy.py is running:\n\n    python nlr_proxy.py';
@@ -1367,9 +1368,64 @@ document.getElementById('report-name-modal-input').addEventListener('keydown', e
   else if(e.key==='Escape'){ e.preventDefault(); closeReportNameModal(); }
 });
 
-/* ── Main ── */
+/* ── Discover + fetch NSRDB hourly data for a location, caching the result and tracking
+   the in-flight request in nlrFetch so a concurrent Enter-triggered simulate can wait on
+   it instead of racing a duplicate NLR request. Only the Fetch button calls this. ── */
+async function ensureNlrData(lat, lon){
+  if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
+    setSt(`Reusing cached NSRDB data for (${lat}, ${lon}) — coordinates unchanged, skipping NLR request…`);
+    await new Promise(r=>setTimeout(r,40));
+    return nlrCache;
+  }
+  const promise = (async ()=>{
+    setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
+    const {datasetName, displayName, year, interval} = await discoverDataset(lat, lon);
+
+    setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
+    const {hourly, meta} = await fetchNLR(lat, lon, NLR_EMAIL, datasetName, year, interval);
+    if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
+
+    nlrCache = {lat, lon, datasetName, displayName, year, interval, hourly, meta};
+    return nlrCache;
+  })();
+  nlrFetch = {lat, lon, promise};
+  try{
+    return await promise;
+  }finally{
+    if(nlrFetch && nlrFetch.promise===promise) nlrFetch = null;
+  }
+}
+
+/* ── "Fetch solar resource data" button: discovers/downloads NSRDB data for the
+   current coordinates and caches it. Does not simulate. ── */
+async function fetchSolarData(){
+  setErr('');
+  const lat=parseFloat(document.getElementById('lat').value);
+  const lon=parseFloat(document.getElementById('lon').value);
+  if(isNaN(lat)||isNaN(lon)){ setErr('Please fill in latitude and longitude.'); return; }
+
+  const btn=document.getElementById('btn-run'); btn.disabled=true;
+  try{
+    const {hourly, displayName, year} = await ensureNlrData(lat, lon);
+    setSt(`✓ Fetched ${hourly.length} hourly GHI readings for ${displayName} (${year}). Press Enter in any input to simulate.`, {spinner:false});
+  }catch(err){
+    setSt('');
+    setErr(`<strong>Error:</strong> ${err.message}<br><br>
+      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
+      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
+      NLR servers busy; invalid API key.`);
+    console.error(err);
+  }finally{btn.disabled=false;}
+}
+document.getElementById('btn-run').addEventListener('click', fetchSolarData);
+
+/* ── Main: simulates every PV × battery combination, reusing cached NSRDB data if the
+   coordinates match, waiting on a fetch already in flight if one's running for these
+   coordinates, or starting a new fetch otherwise (e.g. after a map click or place search
+   changes the location) — the sticky #status banner makes that fetch visible regardless
+   of where on the page the input card that triggered it is. ── */
 async function runSimulation({scroll=true}={}){
-  setErr(''); document.getElementById('results').style.display='none';
+  setErr('');
   const lat=parseFloat(document.getElementById('lat').value);
   const lon=parseFloat(document.getElementById('lon').value);
   const dayWh=parseFloat(document.getElementById('day-load').value);
@@ -1391,23 +1447,19 @@ async function runSimulation({scroll=true}={}){
   const CONFIGS = [];
   for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
+  let dataPromise;
+  if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
+    dataPromise = Promise.resolve(nlrCache);
+  }else if(nlrFetch && nlrFetch.lat===lat && nlrFetch.lon===lon){
+    dataPromise = nlrFetch.promise;
+  }else{
+    dataPromise = ensureNlrData(lat, lon);
+  }
+
+  document.getElementById('results').style.display='none';
   const btn=document.getElementById('btn-run'); btn.disabled=true;
   try{
-    let datasetName, displayName, year, interval, hourly, meta;
-    if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
-      setSt(`Reusing cached NSRDB data for (${lat}, ${lon}) — coordinates unchanged, skipping NLR request…`);
-      await new Promise(r=>setTimeout(r,40));
-      ({datasetName, displayName, year, interval, hourly, meta} = nlrCache);
-    } else {
-      setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
-      ({datasetName, displayName, year, interval} = await discoverDataset(lat, lon));
-
-      setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
-      ({hourly, meta} = await fetchNLR(lat, lon, NLR_EMAIL, datasetName, year, interval));
-      if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
-
-      nlrCache = {lat, lon, datasetName, displayName, year, interval, hourly, meta};
-    }
+    const {year, hourly, meta, displayName, interval} = await dataPromise;
 
     setSt(`Received ${hourly.length} hourly GHI readings. Simulating ${CONFIGS.length} configuration${CONFIGS.length===1?'':'s'}…`);
     await new Promise(r=>setTimeout(r,40));
@@ -1432,7 +1484,7 @@ async function runSimulation({scroll=true}={}){
     renderUnmetKwhMatrix();
     renderUnmetKwhScatter();
     renderCalendar();
-    if(scroll) document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
+    if(scroll) document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
     setErr(`<strong>Error:</strong> ${err.message}<br><br>
@@ -1442,7 +1494,15 @@ async function runSimulation({scroll=true}={}){
     console.error(err);
   }finally{btn.disabled=false;}
 }
-document.getElementById('btn-run').addEventListener('click', ()=>runSimulation());
+
+/* ── Hitting Enter in any input card runs the full simulation (fetching data first if needed) ── */
+const SIM_TRIGGER_FIELD_IDS = ['lat','lon','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed'];
+SIM_TRIGGER_FIELD_IDS.forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); runSimulation(); }
+  });
+});
 </script>
 </body>
 </html>
