@@ -228,9 +228,14 @@
       <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card">
-      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
-      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
-      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
+      <div class="card-title">📅 Day-by-Day Calendar — <span id="cal-label"></span></div>
+      <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
+      <div class="cal-legend">
+        <span class="leg-green">0% unmet</span>
+        <span class="leg-yellow">&lt;25% unmet</span>
+        <span class="leg-orange">25–50% unmet</span>
+        <span class="leg-red">&gt;50% unmet</span>
+      </div>
     </div>
     <div class="card">
       <div class="card-title">🏆 Cost Frontier</div>
@@ -243,14 +248,9 @@
       <p class="cmp-hint">Click a row to highlight the same configuration in the charts and tables above, and update the calendar below.</p>
     </div>
     <div class="card">
-      <div class="card-title">📅 Day-by-Day Calendar — <span id="cal-label"></span></div>
-      <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
-      <div class="cal-legend">
-        <span class="leg-green">0% unmet</span>
-        <span class="leg-yellow">&lt;25% unmet</span>
-        <span class="leg-orange">25–50% unmet</span>
-        <span class="leg-red">&gt;50% unmet</span>
-      </div>
+      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
+      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
     </div>
   </div>
 </div>
