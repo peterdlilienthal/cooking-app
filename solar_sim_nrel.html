@@ -238,6 +238,16 @@
       </div>
     </div>
     <div class="card">
+      <div class="card-title">🔻 Unmet kWh/Year Matrix (PV × Battery)</div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="unmet-kwh-matrix"></table></div>
+      <p class="cmp-hint">Unmet load per year. Click a cell to highlight the same configuration in the tables above and below.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
+      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
+    </div>
+    <div class="card">
       <div class="card-title">🏆 Cost Frontier</div>
       <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
       <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to highlight the same configuration in the tables below.</p>
@@ -246,11 +256,6 @@
       <div class="card-title">⚖️ Configuration Comparison</div>
       <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
       <p class="cmp-hint">Click a row to highlight the same configuration in the charts and tables above, and update the calendar below.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
-      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
-      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
     </div>
   </div>
 </div>
@@ -863,6 +868,7 @@ function renderFrontierTable(){
       renderFrontierTable();
       renderComparison();
       renderCostMatrix();
+      renderUnmetKwhMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -894,6 +900,7 @@ function renderComparison(){
       renderFrontierTable();
       renderComparison();
       renderCostMatrix();
+      renderUnmetKwhMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -951,6 +958,46 @@ function renderCostMatrix(){
       renderFrontierTable();
       renderComparison();
       renderCostMatrix();
+      renderUnmetKwhMatrix();
+      renderUnmetKwhScatter();
+      renderCalendar();
+    });
+  });
+}
+
+/* ── Render: unmet kWh/year matrix, PV size (columns) × battery size (rows) ── */
+function renderUnmetKwhMatrix(){
+  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
+  const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
+  const minU = Math.min(...unmetKwhByIdx), maxU = Math.max(...unmetKwhByIdx);
+
+  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  for(const batt of battSizes){
+    html += `<tr><th>${batt} Wh</th>`;
+    for(const pv of pvSizes){
+      const idx = idxByKey.get(`${pv}|${batt}`);
+      if(idx===undefined){ html += '<td>—</td>'; continue; }
+      const unmetKwh = unmetKwhByIdx[idx];
+      const frac = maxU>minU ? (unmetKwh-minU)/(maxU-minU) : 0;
+      const cls = frac<=0.33?'cg':frac<=0.66?'cw':'cb';
+      const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
+      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${unmetKwh.toFixed(1)}</span></td>`;
+    }
+    html += '</tr>';
+  }
+  html += '</tbody>';
+
+  const tbl = document.getElementById('unmet-kwh-matrix');
+  tbl.innerHTML = html;
+  tbl.querySelectorAll('.matrix-cell').forEach(td=>{
+    td.addEventListener('click', ()=>{
+      activeCfgIdx = +td.dataset.idx;
+      renderFrontierTable();
+      renderComparison();
+      renderCostMatrix();
+      renderUnmetKwhMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -1014,6 +1061,7 @@ function renderUnmetKwhScatter(){
       renderFrontierTable();
       renderComparison();
       renderCostMatrix();
+      renderUnmetKwhMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -1377,6 +1425,7 @@ async function runSimulation({scroll=true}={}){
     renderFrontierTable();
     renderComparison();
     renderCostMatrix();
+    renderUnmetKwhMatrix();
     renderUnmetKwhScatter();
     renderCalendar();
     if(scroll) document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
