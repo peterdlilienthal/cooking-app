@@ -8,7 +8,8 @@
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   :root {
     --sun:#F5A623; --night:#0D1B2A; --dusk:#1E3A5F;
-    --good:#27AE60; --warn:#E67E22; --bad:#C0392B; --white:#FFFFFF;
+    --good:#27AE60; --yellow:#F1C40F; --warn:#E67E22; --bad:#C0392B; --white:#FFFFFF;
+    --muted:#8A94A3;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
   body{font-family:'Space Grotesk',sans-serif;background:var(--night);color:var(--white);min-height:100vh;}
@@ -55,27 +56,23 @@
   #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:13px;color:#E74C3C;margin-top:10px;line-height:1.6;}
   #results{display:none;}
 
-  .score-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:11px;margin-bottom:18px;}
-  @media(max-width:500px){.score-grid{grid-template-columns:1fr 1fr;}}
-  .score-box{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);border-radius:12px;padding:16px 12px;text-align:center;}
-  .score-box.hl{border-color:var(--sun);background:rgba(245,166,35,.1);}
-  .sc-num{font-family:'Space Mono',monospace;font-size:28px;font-weight:700;line-height:1;}
-  .sc-unit{font-size:12px;color:rgba(255,255,255,.61);margin-top:3px;}
-  .sc-label{font-size:10px;letter-spacing:.8px;text-transform:uppercase;color:rgba(255,255,255,.57);margin-top:7px;}
-  .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);} .cs{color:var(--sun);}
+  .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);}
 
   .cal-wrap{overflow-x:auto;}
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
   .cal-hdr{font-size:8px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
   .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
   .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
-  .cal-cell.met{background:var(--good);opacity:.82;}
-  .cal-cell.fail{background:var(--bad);opacity:.72;}
+  .cal-cell.green{background:var(--good);opacity:.82;}
+  .cal-cell.yellow{background:var(--yellow);opacity:.82;}
+  .cal-cell.orange{background:var(--warn);opacity:.82;}
+  .cal-cell.red{background:var(--bad);opacity:.82;}
   .cal-cell.empty{background:transparent;}
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
   .cal-legend span{font-size:11px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
-  .leg-met::before{background:var(--good);} .leg-fail::before{background:var(--bad);}
+  .leg-green::before{background:var(--good);} .leg-yellow::before{background:var(--yellow);}
+  .leg-orange::before{background:var(--warn);} .leg-red::before{background:var(--bad);}
 
   .mtbl{width:100%;border-collapse:collapse;font-size:13px;}
   .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.54);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
@@ -84,9 +81,6 @@
   .mtbl tr[data-idx]{cursor:pointer;}
   .mtbl tr[data-idx]:hover{background:rgba(255,255,255,.03);}
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
-  .bar-wrap{width:100%;background:rgba(255,255,255,.07);border-radius:4px;height:6px;overflow:hidden;}
-  .bar-fill{height:100%;border-radius:4px;}
-  .src-note{font-size:11px;color:rgba(255,255,255,.54);border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:12px;line-height:1.6;}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:14px;outline:none;width:100%;transition:border-color .2s;}
@@ -156,6 +150,27 @@
   </div>
 
   <div class="card">
+    <div class="card-title">💰 System Cost</div>
+    <div class="fields">
+      <div class="field">
+        <label>$ per watt (PV)</label>
+        <input type="number" id="cost-pv-w" value="1.00" min="0" step="0.01">
+        <span class="hint">Total installed cost incl. shipping dealer margins, & mounting</span>
+      </div>
+      <div class="field">
+        <label>$ per kWh (battery)</label>
+        <input type="number" id="cost-batt-kwh" value="200" min="0" step="1">
+        <span class="hint">Total installed Cost per kWh of battery capacity</span>
+      </div>
+      <div class="field">
+        <label>Inverter, controls &amp; misc ($)</label>
+        <input type="number" id="cost-fixed" value="50" min="0" step="10">
+        <span class="hint">Flat cost, same across all configs</span>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
     <div class="card-title">⚡ Your Energy Load</div>
     <div class="fields">
       <div class="field">
@@ -189,33 +204,7 @@
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
-  <div class="card">
-    <div class="card-title">💰 System Cost</div>
-    <div class="fields">
-      <div class="field">
-        <label>$ per watt (PV)</label>
-        <input type="number" id="cost-pv-w" value="1.00" min="0" step="0.01">
-        <span class="hint">Total installed cost incl. shipping dealer margins, & mounting</span>
-      </div>
-      <div class="field">
-        <label>$ per kWh (battery)</label>
-        <input type="number" id="cost-batt-kwh" value="200" min="0" step="1">
-        <span class="hint">Total installed Cost per kWh of battery capacity</span>
-      </div>
-      <div class="field">
-        <label>Inverter, controls &amp; misc ($)</label>
-        <input type="number" id="cost-fixed" value="50" min="0" step="10">
-        <span class="hint">Flat cost, same across all configs</span>
-      </div>
-    </div>
-  </div>
-
   <div class="run-controls-bar" id="run-controls">
-    <div class="field">
-      <label>Acceptable unmet energy on cloudy days: <span id="unmet-tolerance-val" style="color:var(--sun);font-family:'Space Mono',monospace;">10%</span></label>
-      <input type="range" id="unmet-tolerance" min="0" max="50" step="5" value="10">
-      <span class="hint">Days below this shortfall count as success; above it, Failed</span>
-    </div>
     <button class="btn-run" id="btn-run">Discover Dataset, Fetch Data &amp; Simulate All Configs</button>
   </div>
   <div id="status"></div>
@@ -224,72 +213,44 @@
   <div id="results">
     <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <span>📈 Cost vs. Not-Met Days</span>
+        <span>📄 Word Report</span>
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="cmp-hint" id="report-name-display" style="margin:0;"></span>
           <input type="hidden" id="report-name">
           <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
         </div>
       </div>
-      <div class="field" style="max-width:260px;margin-bottom:14px;">
-        <label>Max not-met days to show</label>
-        <input type="number" id="max-notmet-days" min="0" step="1" placeholder="No limit">
-        <span class="hint">Hides configs above this threshold from the plot only</span>
-      </div>
-      <p id="scatter-summary" style="font-size:13px;margin:0 0 8px;"></p>
-      <div class="cal-wrap"><svg id="scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Gold dots have no other config that's both cheaper and lower in not-met days; green dots are dominated by at least one such config. Click a dot to see its day-by-day detail below. The Word report includes your inputs, both PV × battery matrices, and this chart.</p>
+      <p class="cmp-hint">Downloads a .doc report with your inputs and the Total Cost Matrix.</p>
     </div>
     <div class="card">
       <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
       <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">Each dot is one PV/battery configuration. Gold dots have no other config that's both cheaper and lower in unmet kWh; green dots are dominated by at least one such config. Click a dot to see its day-by-day detail below.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">💵 Cost of cheapest system with no unmet days</div>
-      <div class="cal-wrap"><svg id="tolerance-cost-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
-      <p class="cmp-hint">For each tolerance value (0–50%, independent of the slider above), the cost of the cheapest simulated config with 0 not-met days at that tolerance. "n/a" means no simulated config was fully reliable at that tolerance.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">🔢 Not-Met Days Matrix (PV × Battery)</div>
-      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="notmet-matrix"></table></div>
-      <p class="cmp-hint">Days per year the load wasn't fully met. Click a cell to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card">
       <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
       <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
-      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
     </div>
     <div class="card">
       <div class="card-title">🏆 Cost Frontier</div>
       <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
-      <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card">
       <div class="card-title">⚖️ Configuration Comparison</div>
       <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
-      <p class="cmp-hint">Click a row to see its day-by-day detail below.</p>
+      <p class="cmp-hint">Click a row to highlight the same configuration in the charts and tables above, and update the calendar below.</p>
     </div>
     <div class="card">
-      <div class="card-title">📊 Annual Summary — <span id="detail-label"></span></div>
-      <div class="score-grid" id="score-grid"></div>
-      <div class="src-note" id="src-note"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">📅 Day-by-Day Calendar</div>
+      <div class="card-title">📅 Day-by-Day Calendar — <span id="cal-label"></span></div>
       <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
       <div class="cal-legend">
-        <span class="leg-met">Success</span>
-        <span class="leg-fail">Failed</span>
+        <span class="leg-green">0% unmet</span>
+        <span class="leg-yellow">&lt;25% unmet</span>
+        <span class="leg-orange">25–50% unmet</span>
+        <span class="leg-red">&gt;50% unmet</span>
       </div>
-    </div>
-    <div class="card">
-      <div class="card-title">📆 Monthly Breakdown</div>
-      <div style="overflow-x:auto"><table class="mtbl" id="mtbl"></table></div>
-    </div>
-    <div class="card">
-      <div class="card-title">🔍 Verdict</div>
-      <p id="verdict" style="font-size:14px;line-height:1.75;color:rgba(255,255,255,.75);"></p>
     </div>
   </div>
 </div>
@@ -327,13 +288,13 @@ const API_KEY = 'miJdkoFdKvj0XLnEyfSa9bcnHpRBv81IcDLCph6M';
 const NLR_EMAIL = 'plilient@gmail.com';
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-let allRuns = null;      // [{p,b,results,summary}, ...] populated after a run
-let activeCfgIdx = 0;    // which config's detail view is showing (defaults to best after a run)
+let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
+let activeCfgIdx = 0;    // which config is highlighted across the charts and tables (defaults to lowest-unmet-kWh after a run)
 let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,interval} for the last-fetched location — avoids re-hitting NLR when only load/PV/battery/cost inputs change
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
-const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','unmet-tolerance','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name','max-notmet-days'];
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
 (function restoreSavedConfig(){
   let saved;
   try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
@@ -351,15 +312,6 @@ function saveConfig(){
   });
   try{ localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(data)); }catch(e){ /* storage unavailable — not fatal */ }
 }
-const unmetToleranceEl = document.getElementById('unmet-tolerance');
-const unmetToleranceValEl = document.getElementById('unmet-tolerance-val');
-const updateUnmetToleranceLabel = () => { unmetToleranceValEl.textContent = `${unmetToleranceEl.value}%`; };
-updateUnmetToleranceLabel();
-unmetToleranceEl.addEventListener('input', updateUnmetToleranceLabel);
-unmetToleranceEl.addEventListener('change', ()=>{ if(allRuns) runSimulation({scroll:false}); });
-
-document.getElementById('max-notmet-days').addEventListener('input', ()=>{ if(allRuns) renderScatter(); });
-
 CONFIG_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', saveConfig);
@@ -680,7 +632,7 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
 }
 
 /* ── Simulate ── */
-function simulate(hourly, dayWh, nightWh, year, pvW, battWh, unmetTolerance){
+function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
   const Wp     = pvW;
   const capWh  = battWh;
   const minWh  = capWh*0.10;
@@ -724,20 +676,12 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh, unmetTolerance){
       }
 
       const tot=dayWh+nightWh;
-      const met=Math.min(dSrv,dayWh)+Math.min(nSrv,nightWh);
-      const frac=tot>0?Math.min(1,met/tot):1;
-      const isMet=(1-frac)<=unmetTolerance+1e-9;
-      results.push({m,d,frac,met:isMet,fail:!isMet});
+      const served=Math.min(dSrv,dayWh)+Math.min(nSrv,nightWh);
+      const frac=tot>0?Math.min(1,served/tot):1;
+      results.push({m,d,frac});
     }
   }
   return {results, hourlyLog};
-}
-
-function summarize(results){
-  const total=results.length;
-  const met=results.filter(r=>r.met).length;
-  const fail=results.filter(r=>r.fail).length;
-  return {total,met,fail,notMet:fail,pct:Math.round(met/total*100)};
 }
 
 /* ── Export hourly detail for one config as a CSV download ── */
@@ -918,29 +862,25 @@ function renderFrontierTable(){
       activeCfgIdx = +row.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderNotMetMatrix();
       renderCostMatrix();
-      renderScatter();
       renderUnmetKwhScatter();
-      renderDetail();
+      renderCalendar();
     });
   });
 }
 
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
-  const best = allRuns.reduce((a,b)=> b.summary.pct>a.summary.pct ? b : a);
+  const best = allRuns.reduce((a,b)=> computeTotalUnmetKwh(b)<computeTotalUnmetKwh(a) ? b : a);
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Not met</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
-      const s=run.summary;
       const soc = computeSocExtremeDays(run);
       const star = run===best ? ' ★' : '';
       const activeCls = i===activeCfgIdx ? ' active-row' : '';
       return `<tr data-idx="${i}" class="${activeCls}">
         <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
-        <td class="cb" style="font-weight:700">${s.notMet}</td>
         <td style="font-family:'Space Mono',monospace">${computeTotalUnmetKwh(run).toFixed(1)}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
@@ -953,11 +893,9 @@ function renderComparison(){
       activeCfgIdx = +row.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderNotMetMatrix();
       renderCostMatrix();
-      renderScatter();
       renderUnmetKwhScatter();
-      renderDetail();
+      renderCalendar();
     });
   });
   tbl.querySelectorAll('.csv-btn:not(.hist-btn):not(.unmet-kwh-hist-btn)').forEach(btn=>{
@@ -976,43 +914,6 @@ function renderComparison(){
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       showUnmetKwhHistogram(allRuns[+btn.dataset.idx]);
-    });
-  });
-}
-
-/* ── Render: not-met-days matrix, PV size (columns) × battery size (rows) ── */
-function renderNotMetMatrix(){
-  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
-  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
-  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
-
-  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
-  for(const batt of battSizes){
-    html += `<tr><th>${batt} Wh</th>`;
-    for(const pv of pvSizes){
-      const idx = idxByKey.get(`${pv}|${batt}`);
-      if(idx===undefined){ html += '<td>—</td>'; continue; }
-      const s = allRuns[idx].summary;
-      const cls = s.pct>=80?'cg':s.pct>=50?'cw':'cb';
-      const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
-      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${s.notMet}</span></td>`;
-    }
-    html += '</tr>';
-  }
-  html += '</tbody>';
-
-  const tbl = document.getElementById('notmet-matrix');
-  tbl.innerHTML = html;
-  tbl.querySelectorAll('.matrix-cell').forEach(td=>{
-    td.addEventListener('click', ()=>{
-      activeCfgIdx = +td.dataset.idx;
-      renderFrontierTable();
-      renderComparison();
-      renderNotMetMatrix();
-      renderCostMatrix();
-      renderScatter();
-      renderUnmetKwhScatter();
-      renderDetail();
     });
   });
 }
@@ -1049,171 +950,9 @@ function renderCostMatrix(){
       activeCfgIdx = +td.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderNotMetMatrix();
       renderCostMatrix();
-      renderScatter();
       renderUnmetKwhScatter();
-      renderDetail();
-    });
-  });
-}
-
-/* ── Cheapest-config summary lines, shared by the app view and the Word report ── */
-function getCostSummaryLines(){
-  const cheapestOverall = allRuns.reduce((best,run)=> run.cost<best.cost?run:best, allRuns[0]);
-  const zeroFailRuns = allRuns.filter(run=>run.summary.notMet===0);
-  const cheapestReliable = zeroFailRuns.length
-    ? zeroFailRuns.reduce((best,run)=> run.cost<best.cost?run:best, zeroFailRuns[0])
-    : null;
-  const highlighted = allRuns[activeCfgIdx];
-  return [
-    cheapestReliable
-      ? `Cheapest system with 0 not-met days: ${cheapestReliable.pv}W / ${cheapestReliable.batt}Wh — $${Math.round(cheapestReliable.cost).toLocaleString()}`
-      : `No simulated configuration achieved 0 not-met days.`,
-    `Highlighted system: ${highlighted.pv}W / ${highlighted.batt}Wh — $${Math.round(highlighted.cost).toLocaleString()} (${highlighted.summary.notMet} not-met day${highlighted.summary.notMet===1?'':'s'})`,
-    `Cheapest simulated system: ${cheapestOverall.pv}W / ${cheapestOverall.batt}Wh — $${Math.round(cheapestOverall.cost).toLocaleString()} (${cheapestOverall.summary.notMet} not-met day${cheapestOverall.summary.notMet===1?'':'s'})`
-  ];
-}
-
-/* ── Cost of the cheapest config with 0 not-met days, swept across tolerance values ──
-   Re-classifies each run's already-simulated per-day fracs at a hypothetical tolerance,
-   rather than re-running simulate(), since frac doesn't depend on tolerance. ── */
-const TOLERANCE_SWEEP = Array.from({length:11}, (_,i)=> i*5); // 0,5,10,...,50
-
-function cheapestZeroFailCostAtTolerance(tolerancePct){
-  const tol = tolerancePct/100;
-  let best = null;
-  allRuns.forEach(run=>{
-    const notMet = run.results.filter(r => (1-r.frac) > tol+1e-9).length;
-    if(notMet===0 && (best===null || run.cost<best.cost)) best = run;
-  });
-  return best ? best.cost : null;
-}
-
-function renderToleranceCostChart(){
-  const W=640, H=380, M={l:70,r:20,t:20,b:50};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
-
-  const points = TOLERANCE_SWEEP.map(pct => ({pct, cost: cheapestZeroFailCostAtTolerance(pct)}));
-  const known = points.filter(p=>p.cost!==null);
-  const yMinRaw = known.length ? Math.min(...known.map(p=>p.cost)) : 0;
-  const yMaxRaw = known.length ? Math.max(...known.map(p=>p.cost)) : 1;
-  const yPad = Math.max((yMaxRaw-yMinRaw)*0.15, yMaxRaw*0.05, 20);
-  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
-  const yHi = Math.ceil(yMaxRaw+yPad);
-
-  const xScale = i => M.l + (i/(TOLERANCE_SWEEP.length-1))*plotW;
-  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
-
-  let svg = '';
-  TOLERANCE_SWEEP.forEach((t,i)=>{
-    const x=xScale(i);
-    svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}%</text>`;
-  });
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
-  yTicks.forEach(t=>{
-    const y=yScale(t);
-    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
-  });
-  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Acceptable unmet energy tolerance</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Cost of cheapest 0-not-met-day system ($)</text>`;
-
-  for(let i=0;i<points.length-1;i++){
-    const a=points[i], b=points[i+1];
-    if(a.cost!==null && b.cost!==null){
-      svg += `<line x1="${xScale(i)}" y1="${yScale(a.cost)}" x2="${xScale(i+1)}" y2="${yScale(b.cost)}" stroke="var(--sun)" stroke-width="2"/>`;
-    }
-  }
-  points.forEach((p,i)=>{
-    const x=xScale(i);
-    if(p.cost===null){
-      svg += `<text x="${x}" y="${M.t+plotH/2}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.57)" font-family="'Space Mono',monospace">n/a</text>`;
-      return;
-    }
-    const y=yScale(p.cost);
-    svg += `<circle cx="${x}" cy="${y}" r="5" fill="var(--sun)"><title>${p.pct}% tolerance — $${Math.round(p.cost).toLocaleString()}</title></circle>`;
-  });
-
-  document.getElementById('tolerance-cost-chart').innerHTML = svg;
-}
-
-/* ── Render: cost vs. not-met-days scatter plot ── */
-function renderScatter(){
-  const summaryEl = document.getElementById('scatter-summary');
-  if(summaryEl) summaryEl.innerHTML = getCostSummaryLines().join('<br>');
-
-  const W=640, H=380, M={l:64,r:20,t:20,b:50};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
-
-  const maxNotMetRaw = parseFloat(document.getElementById('max-notmet-days').value);
-  const hasMaxNotMet = !isNaN(maxNotMetRaw) && maxNotMetRaw>=0;
-  const plotEntries = allRuns
-    .map((run,i)=>({run,i}))
-    .filter(e => !hasMaxNotMet || e.run.summary.notMet<=maxNotMetRaw);
-
-  if(!plotEntries.length){
-    document.getElementById('scatter-chart').innerHTML =
-      `<text x="${W/2}" y="${H/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.61)" font-family="'Space Grotesk',sans-serif">No configs have ≤ ${maxNotMetRaw} not-met days</text>`;
-    return;
-  }
-
-  const frontierAll = computeFrontier(allRuns.map(r=>r.summary.notMet), allRuns.map(r=>r.cost));
-
-  const xs = plotEntries.map(e=>e.run.summary.notMet);
-  const ys = plotEntries.map(e=>e.run.cost);
-  const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
-  const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
-  const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
-  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
-  const yHi = Math.ceil(yMaxRaw+yPad);
-
-  const xScale = v => M.l + (v/xMax)*plotW;
-  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
-
-  const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(Math.round(xMax*i/5));
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
-
-  let svg = '';
-  xTicks.forEach(t=>{
-    const x=xScale(t);
-    svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
-  });
-  yTicks.forEach(t=>{
-    const y=yScale(t);
-    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
-  });
-  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Not-met days / year</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
-
-  plotEntries.forEach(({run,i})=>{
-    const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
-    const s=run.summary;
-    const fill = frontierAll[i] ? 'var(--sun)' : 'var(--good)';
-    const isActive = i===activeCfgIdx;
-    const r = isActive?8:6;
-    svg += `<circle class="scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${s.notMet} not-met days, $${Math.round(run.cost).toLocaleString()}</title></circle>`;
-  });
-
-  const svgEl = document.getElementById('scatter-chart');
-  svgEl.innerHTML = svg;
-  svgEl.querySelectorAll('.scatter-dot').forEach(dot=>{
-    dot.addEventListener('click', ()=>{
-      activeCfgIdx = +dot.dataset.idx;
-      renderFrontierTable();
-      renderComparison();
-      renderNotMetMatrix();
-      renderCostMatrix();
-      renderScatter();
-      renderUnmetKwhScatter();
-      renderDetail();
+      renderCalendar();
     });
   });
 }
@@ -1260,7 +999,7 @@ function renderUnmetKwhScatter(){
   allRuns.forEach((run,i)=>{
     const unmetKwh = unmetKwhByIdx[i];
     const cx=xScale(unmetKwh), cy=yScale(run.cost);
-    const fill = isFrontier[i] ? 'var(--sun)' : 'var(--good)';
+    const fill = isFrontier[i] ? 'var(--good)' : 'var(--muted)';
     const isActive = i===activeCfgIdx;
     const r = isActive?6:4;
     const frontierNote = isFrontier[i] ? ' (no cheaper system has lower unmet kWh, and no lower-unmet-kWh system is cheaper)' : '';
@@ -1274,160 +1013,42 @@ function renderUnmetKwhScatter(){
       activeCfgIdx = +dot.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderNotMetMatrix();
       renderCostMatrix();
-      renderScatter();
       renderUnmetKwhScatter();
-      renderDetail();
+      renderCalendar();
     });
   });
 }
 
-/* ── Report: light-theme redraw of the scatter chart onto a canvas (for the Word export) ── */
-function buildReportScatterCanvas(){
-  const W=900, H=460, M={l:80,r:30,t:30,b:60};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+/* ── Render: day-by-day calendar for the highlighted config, colored by % of load unmet ── */
+function renderCalendar(){
+  const run = allRuns[activeCfgIdx];
+  const {pv, batt, results, year} = run;
+  const isLeap = year%4===0;
+  const dim = [31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
 
-  const maxNotMetRaw = parseFloat(document.getElementById('max-notmet-days').value);
-  const hasMaxNotMet = !isNaN(maxNotMetRaw) && maxNotMetRaw>=0;
-  const plotEntries = allRuns
-    .map((run,i)=>({run,i}))
-    .filter(e => !hasMaxNotMet || e.run.summary.notMet<=maxNotMetRaw);
+  document.getElementById('cal-label').textContent = `${pv} W · ${batt} Wh`;
 
-  if(!plotEntries.length){
-    const canvas = document.createElement('canvas');
-    canvas.width = W; canvas.height = H;
-    const ctx = canvas.getContext('2d');
-    ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
-    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.font='13px Arial';
-    ctx.fillText(`No configs have ≤ ${maxNotMetRaw} not-met days`, W/2, H/2);
-    return canvas;
-  }
-
-  const xs = plotEntries.map(e=>e.run.summary.notMet);
-  const ys = plotEntries.map(e=>e.run.cost);
-  const xMax = Math.max(5, Math.ceil(Math.max(...xs)*1.15));
-  const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
-  const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
-  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
-  const yHi = Math.ceil(yMaxRaw+yPad);
-  const xScale = v => M.l + (v/xMax)*plotW;
-  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
-
-  ctx.font = '12px Arial';
-  const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(Math.round(xMax*i/5));
-  xTicks.forEach(t=>{
-    const x=xScale(t);
-    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
-    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(String(t), x, M.t+plotH+20);
-  });
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
-  yTicks.forEach(t=>{
-    const y=yScale(t);
-    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
-    ctx.fillStyle='#666666'; ctx.textAlign='right'; ctx.fillText('$'+t.toLocaleString(), M.l-10, y+4);
-  });
-  ctx.strokeStyle='#333333';
-  ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
-
-  ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
-  ctx.fillText('Not-met days / year', M.l+plotW/2, H-14);
-  ctx.save();
-  ctx.translate(20, M.t+plotH/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Total cost ($)', 0, 0);
-  ctx.restore();
-
-  plotEntries.forEach(({run,i})=>{
-    const cx=xScale(run.summary.notMet), cy=yScale(run.cost);
-    const s=run.summary;
-    const fill = s.pct>=80?'#27AE60':s.pct>=50?'#E67E22':'#C0392B';
-    const isActive = i===activeCfgIdx;
-    ctx.beginPath(); ctx.arc(cx,cy,isActive?8:6,0,Math.PI*2);
-    ctx.fillStyle=fill; ctx.fill();
-    if(isActive){ ctx.lineWidth=2.5; ctx.strokeStyle='#F5A623'; ctx.stroke(); }
-  });
-
-  return canvas;
-}
-
-function buildReportToleranceCanvas(){
-  const W=900, H=460, M={l:90,r:30,t:30,b:60};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
-
-  const points = TOLERANCE_SWEEP.map(pct => ({pct, cost: cheapestZeroFailCostAtTolerance(pct)}));
-  const known = points.filter(p=>p.cost!==null);
-  const yMinRaw = known.length ? Math.min(...known.map(p=>p.cost)) : 0;
-  const yMaxRaw = known.length ? Math.max(...known.map(p=>p.cost)) : 1;
-  const yPad = Math.max((yMaxRaw-yMinRaw)*0.15, yMaxRaw*0.05, 20);
-  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
-  const yHi = Math.ceil(yMaxRaw+yPad);
-  const xScale = i => M.l + (i/(TOLERANCE_SWEEP.length-1))*plotW;
-  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
-
-  const canvas = document.createElement('canvas');
-  canvas.width = W; canvas.height = H;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
-
-  ctx.font = '12px Arial';
-  TOLERANCE_SWEEP.forEach((t,i)=>{
-    const x=xScale(i);
-    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
-    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t+'%', x, M.t+plotH+20);
-  });
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
-  yTicks.forEach(t=>{
-    const y=yScale(t);
-    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
-    ctx.fillStyle='#666666'; ctx.textAlign='right'; ctx.fillText('$'+t.toLocaleString(), M.l-10, y+4);
-  });
-  ctx.strokeStyle='#333333';
-  ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
-
-  ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
-  ctx.fillText('Acceptable unmet energy tolerance', M.l+plotW/2, H-14);
-  ctx.save();
-  ctx.translate(24, M.t+plotH/2); ctx.rotate(-Math.PI/2);
-  ctx.fillText('Cost of cheapest 0-not-met-day system ($)', 0, 0);
-  ctx.restore();
-
-  ctx.strokeStyle='#F5A623'; ctx.lineWidth=2.5;
-  for(let i=0;i<points.length-1;i++){
-    const a=points[i], b=points[i+1];
-    if(a.cost!==null && b.cost!==null){
-      ctx.beginPath(); ctx.moveTo(xScale(i),yScale(a.cost)); ctx.lineTo(xScale(i+1),yScale(b.cost)); ctx.stroke();
+  const cal = document.getElementById('cal-grid');
+  cal.innerHTML = '';
+  const mkDiv = (cls,txt,title)=>{const d=document.createElement('div');d.className=cls;if(txt)d.textContent=txt;if(title)d.title=title;return d;};
+  cal.appendChild(mkDiv('cal-hdr'));
+  for(let d=1;d<=31;d++) cal.appendChild(mkDiv('cal-hdr',d));
+  let ri=0;
+  for(let m=0;m<12;m++){
+    cal.appendChild(mkDiv('cal-row-lbl', MONTHS[m]));
+    for(let d=0;d<31;d++){
+      if(d<dim[m]){
+        const r = results[ri++];
+        const unmetPct = (1-r.frac)*100;
+        const lvl = unmetPct<=1e-9 ? 'green' : unmetPct<25 ? 'yellow' : unmetPct<=50 ? 'orange' : 'red';
+        cal.appendChild(mkDiv('cal-cell '+lvl, '', `${MONTHS[m]} ${d+1}: ${unmetPct.toFixed(1)}% unmet`));
+      } else cal.appendChild(mkDiv('cal-cell empty'));
     }
   }
-  points.forEach((p,i)=>{
-    const x=xScale(i);
-    if(p.cost===null){
-      ctx.fillStyle='#999999'; ctx.textAlign='center'; ctx.font='11px Arial';
-      ctx.fillText('n/a', x, M.t+plotH/2);
-      return;
-    }
-    ctx.beginPath(); ctx.arc(x,yScale(p.cost),6,0,Math.PI*2);
-    ctx.fillStyle='#F5A623'; ctx.fill();
-  });
-
-  return canvas;
 }
 
-function base64ToHex(b64){
-  const raw = atob(b64);
-  let hex = '';
-  for(let i=0;i<raw.length;i++){
-    const h = raw.charCodeAt(i).toString(16);
-    hex += h.length===2 ? h : '0'+h;
-  }
-  return hex;
-}
-
-/* ── Report: build a one-page .doc (RTF) with the inputs and the scatter chart ── */
+/* ── Report: build a one-page .doc (RTF) with the inputs and the cost matrix ── */
 function downloadWordReport(){
   if(!allRuns || !allRuns.length){ setErr('Run a simulation first, then download the report.'); return; }
 
@@ -1440,7 +1061,6 @@ function downloadWordReport(){
     ['Location (lat, lon)', `${g('lat')}, ${g('lon')}`],
     ['Daytime energy need', `${g('day-load')} Wh`],
     ['Night-time energy need', `${g('night-load')} Wh`],
-    ['Acceptable unmet energy', `${g('unmet-tolerance')}%`],
     ['PV sizes simulated', `${g('pv-sizes')} W`],
     ['Battery sizes simulated', `${g('batt-sizes')} Wh`],
     ['Cost per watt (PV)', `$${g('cost-pv-w')}`],
@@ -1448,16 +1068,6 @@ function downloadWordReport(){
     ['Inverter, controls & misc', `$${g('cost-fixed')}`],
     ['Data source', `${allRuns[0].datasetLabel} \u2014 ${allRuns[0].year}`]
   ];
-
-  const canvas = buildReportScatterCanvas();
-  const pngHex = base64ToHex(canvas.toDataURL('image/png').split(',')[1]);
-  const picWgoal = Math.round(5.7*1440);
-  const picHgoal = Math.round(picWgoal * canvas.height / canvas.width);
-
-  const toleranceCanvas = buildReportToleranceCanvas();
-  const tolerancePngHex = base64ToHex(toleranceCanvas.toDataURL('image/png').split(',')[1]);
-  const tolerancePicWgoal = Math.round(5.7*1440);
-  const tolerancePicHgoal = Math.round(tolerancePicWgoal * toleranceCanvas.height / toleranceCanvas.width);
 
   const esc = s => String(s).replace(/[\\{}]/g,c=>'\\'+c).replace(/[^\x00-\x7F]/g,c=>'\\u'+c.charCodeAt(0)+'?');
 
@@ -1468,7 +1078,7 @@ function downloadWordReport(){
           + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
   });
 
-  // PV (columns) × battery (rows) matrix, shared by the not-met-days and cost tables below
+  // PV (columns) × battery (rows) cost matrix
   const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
   const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
   const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
@@ -1491,10 +1101,7 @@ function downloadWordReport(){
     });
     return out;
   };
-  const notMetRows = buildMatrixRows(run => String(run.summary.notMet));
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
-
-  const summaryLines = getCostSummaryLines();
 
   const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033
 {\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}
@@ -1505,17 +1112,6 @@ function downloadWordReport(){
 \\pard\\par
 \\pard\\fs24\\b Inputs\\b0\\fs20\\par
 ${rows}
-\\pard\\par
-\\pard\\qc\\fs22\\b Cost vs. Not-Met Days\\b0\\fs20\\par
-\\pard\\qc ${esc(summaryLines[0])}\\par
-\\pard\\qc ${esc(summaryLines[1])}\\par
-\\pard\\qc ${esc(summaryLines[2])}\\par
-\\pard\\qc{\\pict\\pngblip\\picw${canvas.width}\\pich${canvas.height}\\picwgoal${picWgoal}\\pichgoal${picHgoal} ${pngHex}}\\par
-\\pard\\keepn\\qc\\fs22\\b Cost of cheapest system with no unmet days\\b0\\fs20\\par
-\\pard\\keep\\qc{\\pict\\pngblip\\picw${toleranceCanvas.width}\\pich${toleranceCanvas.height}\\picwgoal${tolerancePicWgoal}\\pichgoal${tolerancePicHgoal} ${tolerancePngHex}}\\par
-\\page
-\\pard\\fs24\\b Not-Met Days Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
-${notMetRows}
 \\pard\\par
 \\pard\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
 ${costRows}
@@ -1564,62 +1160,6 @@ document.getElementById('report-name-modal-input').addEventListener('keydown', e
   else if(e.key==='Escape'){ e.preventDefault(); closeReportNameModal(); }
 });
 
-/* ── Render: detail view for the selected config ── */
-function renderDetail(){
-  const run = allRuns[activeCfgIdx];
-  const {pv, batt, results, year, meta} = run;
-  const isLeap=year%4===0;
-  const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
-  const s = summarize(results);
-  const Wp=pv;
-  const whTotal = batt;
-  const col=s.pct>=80?'cg':s.pct>=50?'cw':'cb';
-
-  document.getElementById('detail-label').textContent = `${Wp} W · ${whTotal} Wh`;
-
-  document.getElementById('score-grid').innerHTML=`
-    <div class="score-box hl"><div class="sc-num ${col}">${s.pct}%</div><div class="sc-unit">of days</div><div class="sc-label">Load fully met</div></div>
-    <div class="score-box"><div class="sc-num cg">${s.met}</div><div class="sc-unit">days</div><div class="sc-label">Full success</div></div>
-    <div class="score-box"><div class="sc-num cb">${s.fail}</div><div class="sc-unit">days</div><div class="sc-label">Failed</div></div>
-    <div class="score-box"><div class="sc-num cs">${Wp}</div><div class="sc-unit">W peak</div><div class="sc-label">PV array</div></div>
-    <div class="score-box"><div class="sc-num cs">${whTotal}</div><div class="sc-unit">Wh storage</div><div class="sc-label">Battery bank</div></div>`;
-  document.getElementById('src-note').innerHTML=`<strong style="color:var(--sun)">Data:</strong> ${run.datasetLabel} · ${year} · ${run.interval}-min GHI · ${meta}`;
-
-  // Calendar
-  const cal=document.getElementById('cal-grid'); cal.innerHTML='';
-  const mkDiv=(cls,txt,title)=>{const d=document.createElement('div');d.className=cls;if(txt)d.textContent=txt;if(title)d.title=title;return d;};
-  cal.appendChild(mkDiv('cal-hdr'));
-  for(let d=1;d<=31;d++) cal.appendChild(mkDiv('cal-hdr',d));
-  let ri=0;
-  for(let m=0;m<12;m++){
-    cal.appendChild(mkDiv('cal-row-lbl',MONTHS[m]));
-    for(let d=0;d<31;d++){
-      if(d<dim[m]){
-        const r=results[ri++];
-        cal.appendChild(mkDiv('cal-cell '+(r.met?'met':'fail'),'',`${MONTHS[m]} ${d+1}: ${Math.round(r.frac*100)}% met`));
-      } else cal.appendChild(mkDiv('cal-cell empty'));
-    }
-  }
-
-  // Monthly table
-  const md=[];let ri2=0;
-  for(let m=0;m<12;m++){const sl=results.slice(ri2,ri2+dim[m]);ri2+=dim[m];md.push({m,days:dim[m],met:sl.filter(r=>r.met).length,fail:sl.filter(r=>r.fail).length});}
-  document.getElementById('mtbl').innerHTML=`<thead><tr><th>Month</th><th>Days</th><th>Full</th><th>Failed</th><th>Success rate</th></tr></thead><tbody>`+
-    md.map(mo=>{const pc=Math.round(mo.met/mo.days*100);const bc=pc>=80?'var(--good)':pc>=50?'var(--warn)':'var(--bad)';return`<tr><td>${MONTHS[mo.m]}</td><td style="font-family:'Space Mono',monospace">${mo.days}</td><td class="cg">${mo.met}</td><td class="cb">${mo.fail}</td><td><div style="display:flex;align-items:center;gap:8px"><div class="bar-wrap"><div class="bar-fill" style="width:${pc}%;background:${bc}"></div></div><span style="font-family:'Space Mono',monospace;font-size:11px;min-width:30px">${pc}%</span></div></td></tr>`;}).join('')+'</tbody>';
-
-  // Verdict
-  const worst=md.reduce((a,b)=>a.met/a.days<b.met/b.days?a:b);
-  const best =md.reduce((a,b)=>a.met/a.days>b.met/b.days?a:b);
-  const dayWh = run.dayWh, nightWh = run.nightWh;
-  const kwh=(dayWh+nightWh)/1000;
-  let v=s.pct>=95?`✅ Excellent — ${Wp} W / ${whTotal} Wh fully covers your ${kwh.toFixed(1)} kWh/day on ${s.pct}% of days.`
-     :s.pct>=80?`🟡 Good — ${s.fail} days/year see shortfalls, mostly in ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%). One more panel or battery would push past 95%.`
-     :s.pct>=50?`⚠️ Marginal — only ${s.pct}% of days fully covered. Your ${kwh.toFixed(1)} kWh/day load is large for ${Wp} W of panels. Consider upgrading.`
-     :`❌ Undersized — ${s.pct}% success. Try a larger config or reduce your load.`;
-  v+=` Best: ${MONTHS[best.m]} (${Math.round(best.met/best.days*100)}%). Worst: ${MONTHS[worst.m]} (${Math.round(worst.met/worst.days*100)}%).`;
-  document.getElementById('verdict').textContent=v;
-}
-
 /* ── Main ── */
 async function runSimulation({scroll=true}={}){
   setErr(''); document.getElementById('results').style.display='none';
@@ -1627,17 +1167,14 @@ async function runSimulation({scroll=true}={}){
   const lon=parseFloat(document.getElementById('lon').value);
   const dayWh=parseFloat(document.getElementById('day-load').value);
   const nightWh=parseFloat(document.getElementById('night-load').value);
-  const unmetTolerancePct=parseFloat(document.getElementById('unmet-tolerance').value);
   const costPvW=parseFloat(document.getElementById('cost-pv-w').value);
   const costBattKwh=parseFloat(document.getElementById('cost-batt-kwh').value);
   const costFixed=parseFloat(document.getElementById('cost-fixed').value);
   if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
-  if(isNaN(unmetTolerancePct)||unmetTolerancePct<0||unmetTolerancePct>100){setErr('Acceptable unmet energy (%) must be between 0 and 100.');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
   if(isNaN(costPvW)||costPvW<0){setErr('$ per watt (PV) must be a non-negative number.');return;}
   if(isNaN(costBattKwh)||costBattKwh<0){setErr('$ per kWh (battery) must be a non-negative number.');return;}
   if(isNaN(costFixed)||costFixed<0){setErr('Inverter, controls & misc ($) must be a non-negative number.');return;}
-  const unmetTolerance=unmetTolerancePct/100;
 
   let pvSizes, battSizes;
   try{
@@ -1669,27 +1206,24 @@ async function runSimulation({scroll=true}={}){
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
-      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt, unmetTolerance);
+      const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, cfg.pv, cfg.batt);
       const cost = cfg.pv*costPvW + (cfg.batt/1000)*costBattKwh + costFixed;
       return {
-        pv:cfg.pv, batt:cfg.batt, results, hourlyLog, summary:summarize(results), cost,
+        pv:cfg.pv, batt:cfg.batt, results, hourlyLog, cost,
         year, meta, dayWh, nightWh,
         datasetLabel: displayName, interval
       };
     });
-    // default detail view to the best-performing config
-    activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> run.summary.pct>arr[bi].summary.pct?i:bi, 0);
+    // default selection to the config with the least unmet energy
+    activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> computeTotalUnmetKwh(run)<computeTotalUnmetKwh(arr[bi])?i:bi, 0);
 
     setSt('');
     document.getElementById('results').style.display='block';
     renderFrontierTable();
     renderComparison();
-    renderNotMetMatrix();
     renderCostMatrix();
-    renderScatter();
     renderUnmetKwhScatter();
-    renderToleranceCostChart();
-    renderDetail();
+    renderCalendar();
     if(scroll) document.getElementById('run-controls').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
