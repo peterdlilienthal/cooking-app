@@ -1048,7 +1048,128 @@ function renderCalendar(){
   }
 }
 
-/* ── Report: build a one-page .doc (RTF) with the inputs and the cost matrix ── */
+/* ── Report: light-theme redraw of the Cost vs. Unmet kWh/Year scatter onto a canvas (for the Word export) ── */
+function buildReportUnmetKwhScatterCanvas(){
+  const W=900, H=460, M={l:80,r:30,t:30,b:60};
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+
+  const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
+  const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
+
+  const xs = unmetKwhByIdx;
+  const ys = allRuns.map(run=>run.cost);
+  const xMaxRaw = Math.max(...xs);
+  const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
+  const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
+  const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
+  const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
+  const yHi = Math.ceil(yMaxRaw+yPad);
+  const xScale = v => M.l + (v/xMax)*plotW;
+  const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.font = '12px Arial';
+  const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(xMax*i/5);
+  xTicks.forEach(t=>{
+    const x=xScale(t);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t.toFixed(1), x, M.t+plotH+20);
+  });
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  yTicks.forEach(t=>{
+    const y=yScale(t);
+    ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
+    ctx.fillStyle='#666666'; ctx.textAlign='right'; ctx.fillText('$'+t.toLocaleString(), M.l-10, y+4);
+  });
+  ctx.strokeStyle='#333333';
+  ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
+
+  ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
+  ctx.fillText('Unmet kWh / year', M.l+plotW/2, H-14);
+  ctx.save();
+  ctx.translate(20, M.t+plotH/2); ctx.rotate(-Math.PI/2);
+  ctx.fillText('Total cost ($)', 0, 0);
+  ctx.restore();
+
+  allRuns.forEach((run,i)=>{
+    const cx=xScale(unmetKwhByIdx[i]), cy=yScale(run.cost);
+    const fill = isFrontier[i] ? '#27AE60' : '#8A94A3';
+    const isActive = i===activeCfgIdx;
+    ctx.beginPath(); ctx.arc(cx,cy,isActive?8:6,0,Math.PI*2);
+    ctx.fillStyle=fill; ctx.fill();
+    if(isActive){ ctx.lineWidth=2.5; ctx.strokeStyle='#F5A623'; ctx.stroke(); }
+  });
+
+  return canvas;
+}
+
+/* ── Report: light-theme redraw of the day-by-day calendar onto a canvas (for the Word export) ── */
+function buildReportCalendarCanvas(run){
+  const {pv, batt, results, year} = run;
+  const isLeap = year%4===0;
+  const dim = [31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
+
+  const cell=20, labelW=54, M={l:20,t:56,r:20,b:70};
+  const W = M.l+labelW+31*cell+M.r;
+  const H = M.t+12*cell+M.b;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff'; ctx.fillRect(0,0,W,H);
+
+  ctx.fillStyle='#333333'; ctx.font='bold 15px Arial'; ctx.textAlign='left';
+  ctx.fillText(`${pv} W / ${batt} Wh`, M.l, 26);
+
+  const gx = M.l+labelW, gy = M.t;
+  ctx.font='9px Arial'; ctx.fillStyle='#666666'; ctx.textAlign='center';
+  for(let d=1; d<=31; d++) ctx.fillText(String(d), gx+(d-0.5)*cell, gy-6);
+
+  const colorFor = unmetPct => unmetPct<=1e-9 ? '#27AE60' : unmetPct<25 ? '#F1C40F' : unmetPct<=50 ? '#E67E22' : '#C0392B';
+
+  let ri=0;
+  for(let m=0;m<12;m++){
+    const rowY = gy + m*cell;
+    ctx.fillStyle='#666666'; ctx.font='9px Arial'; ctx.textAlign='right';
+    ctx.fillText(MONTHS[m], gx-6, rowY+cell/2+3);
+    for(let d=0; d<31; d++){
+      if(d<dim[m]){
+        const r = results[ri++];
+        const unmetPct = (1-r.frac)*100;
+        ctx.fillStyle = colorFor(unmetPct);
+        ctx.fillRect(gx+d*cell+1, rowY+1, cell-2, cell-2);
+      }
+    }
+  }
+
+  const legend = [['#27AE60','0% unmet'],['#F1C40F','<25% unmet'],['#E67E22','25–50% unmet'],['#C0392B','>50% unmet']];
+  let lx = M.l;
+  const ly = gy + 12*cell + 26;
+  ctx.font='11px Arial'; ctx.textAlign='left';
+  legend.forEach(([color,label])=>{
+    ctx.fillStyle=color; ctx.fillRect(lx, ly-9, 10, 10);
+    ctx.fillStyle='#333333'; ctx.fillText(label, lx+15, ly);
+    lx += 15 + ctx.measureText(label).width + 22;
+  });
+
+  return canvas;
+}
+
+function base64ToHex(b64){
+  const raw = atob(b64);
+  let hex = '';
+  for(let i=0;i<raw.length;i++){
+    const h = raw.charCodeAt(i).toString(16);
+    hex += h.length===2 ? h : '0'+h;
+  }
+  return hex;
+}
+
+/* ── Report: build a one-page .doc (RTF) with the inputs, charts, highlighted config, and cost matrix ── */
 function downloadWordReport(){
   if(!allRuns || !allRuns.length){ setErr('Run a simulation first, then download the report.'); return; }
 
@@ -1073,7 +1194,7 @@ function downloadWordReport(){
 
   let rows = '';
   inputs.forEach(([label,val])=>{
-    rows += `\\trowd\\trgaph60\\trleft0\\cellx2600\\cellx9500\n`
+    rows += `\\trowd\\trkeep\\trgaph60\\trleft0\\cellx2600\\cellx9500\n`
           + `\\pard\\intbl\\b ${esc(label)}\\b0\\cell\n`
           + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
   });
@@ -1088,11 +1209,11 @@ function downloadWordReport(){
   const cellxStr = cellxs.map(x=>`\\cellx${x}`).join('');
 
   const buildMatrixRows = cellText => {
-    let out = `\\trowd\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b Batt \\emdash  PV\\b0\\cell`;
+    let out = `\\trowd\\trkeep\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b Batt \\emdash  PV\\b0\\cell`;
     pvSizes.forEach(pv => out += `\\pard\\intbl\\qc\\b ${pv}W\\b0\\cell`);
     out += `\\row\n`;
     battSizes.forEach(batt=>{
-      out += `\\trowd\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b ${batt}Wh\\b0\\cell`;
+      out += `\\trowd\\trkeep\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b ${batt}Wh\\b0\\cell`;
       pvSizes.forEach(pv=>{
         const idx = idxByKey.get(`${pv}|${batt}`);
         out += `\\pard\\intbl\\qc ${esc(idx===undefined ? '\u2014' : cellText(allRuns[idx]))}\\cell`;
@@ -1103,6 +1224,32 @@ function downloadWordReport(){
   };
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
 
+  // Highlighted configuration
+  const activeRun = allRuns[activeCfgIdx];
+  const activeUnmetKwh = computeTotalUnmetKwh(activeRun);
+  const configFields = [
+    ['PV size', `${activeRun.pv} W`],
+    ['Battery size', `${activeRun.batt} Wh`],
+    ['Total cost', `$${Math.round(activeRun.cost).toLocaleString()}`],
+    ['Unmet kWh/year', activeUnmetKwh.toFixed(1)]
+  ];
+  let configRows = '';
+  configFields.forEach(([label,val])=>{
+    configRows += `\\trowd\\trkeep\\trgaph60\\trleft0\\cellx2600\\cellx9500\n`
+          + `\\pard\\intbl\\b ${esc(label)}\\b0\\cell\n`
+          + `\\pard\\intbl ${esc(val)}\\cell\\row\n`;
+  });
+
+  const scatterCanvas = buildReportUnmetKwhScatterCanvas();
+  const scatterPngHex = base64ToHex(scatterCanvas.toDataURL('image/png').split(',')[1]);
+  const scatterPicWgoal = Math.round(5.7*1440);
+  const scatterPicHgoal = Math.round(scatterPicWgoal * scatterCanvas.height / scatterCanvas.width);
+
+  const calendarCanvas = buildReportCalendarCanvas(activeRun);
+  const calendarPngHex = base64ToHex(calendarCanvas.toDataURL('image/png').split(',')[1]);
+  const calendarPicWgoal = Math.round(5.7*1440);
+  const calendarPicHgoal = Math.round(calendarPicWgoal * calendarCanvas.height / calendarCanvas.width);
+
   const rtf = `{\\rtf1\\ansi\\ansicpg1252\\deff0\\deflang1033
 {\\fonttbl{\\f0\\fswiss\\fcharset0 Arial;}}
 \\paperw12240\\paperh15840\\margl700\\margr700\\margt600\\margb600
@@ -1110,10 +1257,18 @@ function downloadWordReport(){
 \\pard\\qc\\f0\\fs36\\b ${esc(reportName)}\\b0\\par
 \\pard\\qc\\fs18 Generated ${esc(new Date().toLocaleDateString())}\\par
 \\pard\\par
-\\pard\\fs24\\b Inputs\\b0\\fs20\\par
+\\pard\\keepn\\fs24\\b Inputs\\b0\\fs20\\par
 ${rows}
 \\pard\\par
-\\pard\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
+\\pard\\keepn\\qc\\fs22\\b Cost vs. Unmet kWh/Year\\b0\\fs20\\par
+\\pard\\keep\\qc{\\pict\\pngblip\\picw${scatterCanvas.width}\\pich${scatterCanvas.height}\\picwgoal${scatterPicWgoal}\\pichgoal${scatterPicHgoal} ${scatterPngHex}}\\par
+\\pard\\keepn\\qc\\fs22\\b Day-by-Day Calendar\\b0\\fs20\\par
+\\pard\\keep\\qc{\\pict\\pngblip\\picw${calendarCanvas.width}\\pich${calendarCanvas.height}\\picwgoal${calendarPicWgoal}\\pichgoal${calendarPicHgoal} ${calendarPngHex}}\\par
+\\pard\\par
+\\pard\\keepn\\fs24\\b Highlighted Configuration\\b0\\fs20\\par
+${configRows}
+\\pard\\par
+\\pard\\keepn\\fs24\\b Total Cost Matrix (PV \u00d7 Battery)\\b0\\fs20\\par
 ${costRows}
 }`;
 
