@@ -224,7 +224,7 @@
     </div>
     <div class="card">
       <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
-      <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:480px;"></svg></div>
+      <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 396" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card">
@@ -826,7 +826,20 @@ function computeSocExtremeDays(run){
 /* ── Total unmet energy over the year, in kWh, for one config ── */
 function computeTotalUnmetKwh(run){
   const dailyTotalWh = run.dayWh+run.nightWh;
-  return run.results.reduce((sum,r)=> sum+(1-r.frac)*dailyTotalWh/1000, 0);
+  return run.results.reduce((sum,r)=>{
+    const unmetFrac = 1-r.frac;
+    return sum+(unmetFrac<=1e-9?0:unmetFrac)*dailyTotalWh/1000;
+  }, 0);
+}
+
+/* ── Total load over the year, in kWh, for one config (same across all configs) ── */
+function computeAnnualLoadKwh(run){
+  return (run.dayWh+run.nightWh)*run.results.length/1000;
+}
+
+/* ── Format unmet kWh/year: a second decimal when the value would otherwise round to 0.0 ── */
+function formatUnmetKwh(v){
+  return v<0.1 ? v.toFixed(2) : v.toFixed(1);
 }
 
 /* ── Which configs are on the cost/x-metric frontier — no other config is at least as
@@ -858,7 +871,7 @@ function renderFrontierTable(){
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
-        <td style="font-family:'Space Mono',monospace">${unmetKwh.toFixed(1)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
         <td style="font-family:'Space Mono',monospace">${marginal===null ? '—' : '$'+marginal.toFixed(2)}</td>
       </tr>`;
     }).join('') + '</tbody>';
@@ -888,7 +901,7 @@ function renderComparison(){
       return `<tr data-idx="${i}" class="${activeCls}">
         <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
-        <td style="font-family:'Space Mono',monospace">${computeTotalUnmetKwh(run).toFixed(1)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(computeTotalUnmetKwh(run))}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
         <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn hist-btn" data-idx="${i}" type="button">📊 Histogram</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
@@ -984,7 +997,7 @@ function renderUnmetKwhMatrix(){
       const frac = maxU>minU ? (unmetKwh-minU)/(maxU-minU) : 0;
       const cls = frac<=0.33?'cg':frac<=0.66?'cw':'cb';
       const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
-      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${unmetKwh.toFixed(1)}</span></td>`;
+      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${formatUnmetKwh(unmetKwh)}</span></td>`;
     }
     html += '</tr>';
   }
@@ -1007,11 +1020,12 @@ function renderUnmetKwhMatrix(){
 
 /* ── Render: cost vs. unmet-kWh/year scatter plot ── */
 function renderUnmetKwhScatter(){
-  const W=640, H=380, M={l:64,r:20,t:20,b:50};
+  const W=640, H=396, M={l:64,r:20,t:20,b:66};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
+  const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
   const xs = unmetKwhByIdx;
   const ys = allRuns.map(run=>run.cost);
@@ -1031,8 +1045,10 @@ function renderUnmetKwhScatter(){
   let svg = '';
   xTicks.forEach(t=>{
     const x=xScale(t);
+    const pct = annualLoadKwh>0 ? (t/annualLoadKwh*100) : 0;
     svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
     svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t.toFixed(1)}</text>`;
+    svg += `<text x="${x}" y="${M.t+plotH+31}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.44)" font-family="'Space Mono',monospace">${pct.toFixed(2)}%</text>`;
   });
   yTicks.forEach(t=>{
     const y=yScale(t);
@@ -1051,7 +1067,7 @@ function renderUnmetKwhScatter(){
     const isActive = i===activeCfgIdx;
     const r = isActive?6:4;
     const frontierNote = isFrontier[i] ? ' (no cheaper system has lower unmet kWh, and no lower-unmet-kWh system is cheaper)' : '';
-    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${unmetKwh.toFixed(1)} unmet kWh/yr, $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
+    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${formatUnmetKwh(unmetKwh)} unmet kWh/yr, $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
   });
 
   const svgEl = document.getElementById('unmet-kwh-scatter-chart');
@@ -1099,11 +1115,12 @@ function renderCalendar(){
 
 /* ── Report: light-theme redraw of the Cost vs. Unmet kWh/Year scatter onto a canvas (for the Word export) ── */
 function buildReportUnmetKwhScatterCanvas(){
-  const W=900, H=460, M={l:80,r:30,t:30,b:60};
+  const W=900, H=476, M={l:80,r:30,t:30,b:76};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
+  const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
   const xs = unmetKwhByIdx;
   const ys = allRuns.map(run=>run.cost);
@@ -1125,8 +1142,10 @@ function buildReportUnmetKwhScatterCanvas(){
   const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(xMax*i/5);
   xTicks.forEach(t=>{
     const x=xScale(t);
+    const pct = annualLoadKwh>0 ? (t/annualLoadKwh*100) : 0;
     ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
     ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t.toFixed(1), x, M.t+plotH+20);
+    ctx.fillStyle='#999999'; ctx.fillText(pct.toFixed(2)+'%', x, M.t+plotH+35);
   });
   const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
   yTicks.forEach(t=>{
@@ -1272,7 +1291,7 @@ function downloadWordReport(){
     return out;
   };
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
-  const unmetKwhRows = buildMatrixRows(run => computeTotalUnmetKwh(run).toFixed(1));
+  const unmetKwhRows = buildMatrixRows(run => formatUnmetKwh(computeTotalUnmetKwh(run)));
 
   // Highlighted configuration
   const activeRun = allRuns[activeCfgIdx];
@@ -1281,7 +1300,7 @@ function downloadWordReport(){
     ['PV size', `${activeRun.pv} W`],
     ['Battery size', `${activeRun.batt} Wh`],
     ['Total cost', `$${Math.round(activeRun.cost).toLocaleString()}`],
-    ['Unmet kWh/year', activeUnmetKwh.toFixed(1)]
+    ['Unmet kWh/year', formatUnmetKwh(activeUnmetKwh)]
   ];
   let configRows = '';
   configFields.forEach(([label,val])=>{
