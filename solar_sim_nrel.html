@@ -16,24 +16,24 @@
 
   header{background:linear-gradient(135deg,var(--night),var(--dusk));border-bottom:1px solid rgba(245,166,35,.25);padding:22px 32px;display:flex;align-items:center;gap:16px;}
   .sun-icon{width:40px;height:40px;background:var(--sun);border-radius:50%;box-shadow:0 0 0 7px rgba(245,166,35,.15),0 0 0 14px rgba(245,166,35,.06);flex-shrink:0;}
-  header h1{font-size:20px;font-weight:700;letter-spacing:-.3px;}
-  header p{font-size:12px;color:rgba(255,255,255,.64);margin-top:2px;}
-  .badge{margin-left:auto;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:6px 12px;font-size:11px;color:var(--sun);font-weight:600;white-space:nowrap;}
+  header h1{font-size:24px;font-weight:700;letter-spacing:-.3px;}
+  header p{font-size:14px;color:rgba(255,255,255,.64);margin-top:2px;}
+  .badge{margin-left:auto;background:rgba(245,166,35,.12);border:1px solid rgba(245,166,35,.3);border-radius:8px;padding:6px 12px;font-size:13px;color:var(--sun);font-weight:600;white-space:nowrap;}
 
   .app{max-width:920px;margin:0 auto;padding:28px 18px 60px;}
   .card{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.09);border-radius:16px;padding:26px;margin-bottom:18px;}
-  .card-title{font-size:10px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--sun);margin-bottom:18px;}
+  .card-title{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--sun);margin-bottom:18px;}
 
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media(max-width:580px){.fields{grid-template-columns:1fr;}}
   .field{display:flex;flex-direction:column;gap:5px;}
-  .field label{font-size:12px;color:rgba(255,255,255,.7);font-weight:500;}
-  .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:13px;transition:border-color .2s;outline:none;width:100%;}
+  .field label{font-size:14px;color:rgba(255,255,255,.7);font-weight:500;}
+  .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:15px;transition:border-color .2s;outline:none;width:100%;}
   .field input:focus,.field select:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .field input[type=range]{accent-color:var(--sun);background:transparent;border:none;padding:0;height:24px;}
   .run-controls-bar{background:var(--night);padding:14px 18px;margin:0 -18px 18px;border-bottom:1px solid rgba(245,166,35,.25);}
   .field select option{background:#1E3A5F;}
-  .field .hint{font-size:11px;color:rgba(255,255,255,.54);}
+  .field .hint{font-size:13px;color:rgba(255,255,255,.54);}
 
   .sys-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
   @media(max-width:560px){.sys-grid{grid-template-columns:repeat(2,1fr);}}
@@ -41,27 +41,27 @@
   .sys-opt.clickable{cursor:pointer;}
   .sys-opt.clickable:hover{border-color:var(--sun);background:rgba(245,166,35,.07);}
   .sys-opt.active{border-color:var(--sun);background:rgba(245,166,35,.14);}
-  .sys-tag{font-size:10px;color:rgba(255,255,255,.64);margin-bottom:4px;}
-  .sys-val{font-family:'Space Mono',monospace;font-size:14px;font-weight:700;color:var(--sun);}
-  .sys-sub{font-size:10px;color:rgba(255,255,255,.57);margin-top:4px;}
-  .sys-note{font-size:12px;color:rgba(255,255,255,.61);margin-bottom:14px;line-height:1.6;}
+  .sys-tag{font-size:12px;color:rgba(255,255,255,.64);margin-bottom:4px;}
+  .sys-val{font-family:'Space Mono',monospace;font-size:17px;font-weight:700;color:var(--sun);}
+  .sys-sub{font-size:12px;color:rgba(255,255,255,.57);margin-top:4px;}
+  .sys-note{font-size:14px;color:rgba(255,255,255,.61);margin-bottom:14px;line-height:1.6;}
 
-  .btn-run{width:100%;margin-top:6px;padding:14px;background:var(--sun);color:var(--night);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:15px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;}
+  .btn-run{width:100%;margin-top:6px;padding:14px;background:var(--sun);color:var(--night);border:none;border-radius:12px;font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;}
   .btn-run:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
   .btn-run:disabled{opacity:.4;cursor:not-allowed;}
 
-  #status{display:none;position:sticky;top:0;z-index:20;text-align:center;padding:16px;font-size:13px;font-weight:600;color:var(--white);background:var(--night);border-bottom:2px solid var(--sun);box-shadow:0 6px 18px rgba(0,0,0,.35);}
+  #status{display:none;position:sticky;top:0;z-index:20;text-align:center;padding:16px;font-size:15px;font-weight:600;color:var(--white);background:var(--night);border-bottom:2px solid var(--sun);box-shadow:0 6px 18px rgba(0,0,0,.35);}
   .spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:13px;color:#E74C3C;margin-top:10px;line-height:1.6;}
+  #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:15px;color:#E74C3C;margin-top:10px;line-height:1.6;}
   #results{display:none;}
 
   .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);}
 
   .cal-wrap{overflow-x:auto;}
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
-  .cal-hdr{font-size:8px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
-  .cal-row-lbl{font-size:9px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
+  .cal-hdr{font-size:10px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
+  .cal-row-lbl{font-size:11px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
   .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
   .cal-cell.green{background:var(--good);opacity:.82;}
   .cal-cell.yellow{background:var(--yellow);opacity:.82;}
@@ -69,23 +69,23 @@
   .cal-cell.red{background:var(--bad);opacity:.82;}
   .cal-cell.empty{background:transparent;}
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
-  .cal-legend span{font-size:11px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
+  .cal-legend span{font-size:13px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
   .leg-green::before{background:var(--good);} .leg-yellow::before{background:var(--yellow);}
   .leg-orange::before{background:var(--warn);} .leg-red::before{background:var(--bad);}
 
-  .mtbl{width:100%;border-collapse:collapse;font-size:13px;}
-  .mtbl th{text-align:left;padding:7px 10px;font-size:9px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.54);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
+  .mtbl{width:100%;border-collapse:collapse;font-size:15px;}
+  .mtbl th{text-align:left;padding:7px 10px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.54);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
   .mtbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);}
   .mtbl tr:last-child td{border-bottom:none;}
   .mtbl tr[data-idx]{cursor:pointer;}
   .mtbl tr[data-idx]:hover{background:rgba(255,255,255,.03);}
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
-  .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:11px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
+  .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
-  .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:14px;outline:none;width:100%;transition:border-color .2s;}
+  .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
-  .cmp-hint{font-size:11px;color:rgba(255,255,255,.54);margin-top:10px;}
+  .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
   .matrix-tbl{table-layout:fixed;min-width:100%;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
@@ -95,7 +95,7 @@
   .scatter-dot{cursor:pointer;transition:r .12s;}
   .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:100;padding:20px;}
   .modal-card{background:var(--night);border:1px solid rgba(245,166,35,.3);border-radius:16px;padding:26px;max-width:640px;width:100%;max-height:90vh;overflow-y:auto;}
-  .modal-close{background:none;border:none;color:rgba(255,255,255,.67);font-size:20px;cursor:pointer;line-height:1;padding:4px 8px;}
+  .modal-close{background:none;border:none;color:rgba(255,255,255,.67);font-size:22px;cursor:pointer;line-height:1;padding:4px 8px;}
   .modal-close:hover{color:var(--white);}
   .hist-bar{cursor:default;}
   .scatter-dot:hover{stroke:var(--sun);stroke-width:2;}
@@ -198,12 +198,12 @@
     <div class="fields">
       <div class="field">
         <label>PV sizes to simulate (W)</label>
-        <input type="text" id="pv-sizes" value="350,700">
+        <input type="text" id="pv-sizes" value="240,400,560,720,880">
         <span class="hint">Comma-separated, e.g. 350,700,1050</span>
       </div>
       <div class="field">
         <label>Battery sizes to simulate (Wh)</label>
-        <input type="text" id="batt-sizes" value="1000,2000">
+        <input type="text" id="batt-sizes" value="390,510,630,720,810">
         <span class="hint">Comma-separated, e.g. 1000,2000,3000</span>
       </div>
     </div>
@@ -273,6 +273,47 @@
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
       <button class="csv-btn" id="report-name-modal-cancel" type="button">Cancel</button>
       <button class="csv-btn" id="report-name-modal-confirm" type="button">⬇ Download</button>
+    </div>
+  </div>
+</div>
+
+<div id="size-hint-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:420px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">💡 Suggestion</div>
+      <button class="modal-close" id="size-hint-modal-close" type="button">&times;</button>
+    </div>
+    <p class="cmp-hint" id="size-hint-modal-text" style="margin:0;"></p>
+    <div style="display:flex;justify-content:flex-end;margin-top:16px;">
+      <button class="csv-btn" id="size-hint-modal-ok" type="button">OK</button>
+    </div>
+  </div>
+</div>
+
+<div id="load-change-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:420px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">⚡ Load Changed</div>
+      <button class="modal-close" id="load-change-modal-close" type="button">&times;</button>
+    </div>
+    <p class="cmp-hint" style="margin:0;">Your energy load changed. Keep your current PV and battery sizes, or let the app recommend 5 of each based on the new load?</p>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <button class="csv-btn" id="load-change-modal-keep" type="button">Keep existing</button>
+      <button class="csv-btn" id="load-change-modal-recommend" type="button">Recommend sizes</button>
+    </div>
+  </div>
+</div>
+
+<div id="location-mismatch-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:420px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;">📍 Location Changed</div>
+      <button class="modal-close" id="location-mismatch-modal-close" type="button">&times;</button>
+    </div>
+    <p class="cmp-hint" style="margin:0;">Solar data does not match the location. Fetch new data?</p>
+    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+      <button class="csv-btn" id="location-mismatch-modal-no" type="button">No</button>
+      <button class="csv-btn" id="location-mismatch-modal-yes" type="button">Yes</button>
     </div>
   </div>
 </div>
@@ -513,6 +554,112 @@ function updateComboPreview(){
 ['pv-sizes','batt-sizes'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
 updateComboPreview();
 
+/* ── Recommended PV/battery sizes derived from the current day+night load ── */
+function computeRecommendedSizes(dayWh, nightWh){
+  const total = dayWh + nightWh;
+  const pv = [0.3, 0.5, 0.7, 0.9, 1.1].map(m => Math.round(m*total));
+  const batt = [1.3, 1.7, 2.1, 2.4, 2.7].map(m => Math.round(m*nightWh));
+  return {pv, batt};
+}
+
+/* ── Gates in front of every simulation attempt: if the location or the load changed since
+   the solar data / sizes were last confirmed, ask before running anything. Each gate's modal
+   resolves back into continueSimulation(), which re-checks and either shows the next gate or
+   (once clear) runs performSimulation() with the opts the original attempt was made with.
+   The location gate compares the cached data's coordinates against the current fields fresh
+   on every attempt (not a one-shot dirty flag), so it keeps asking on every attempt made with
+   stale data — e.g. after answering "No" once — not just the first attempt after a change.
+   useStaleLocationData is a one-attempt bypass: set by "No" so *this* attempt proceeds on the
+   old data, then consumed and cleared inside performSimulation so the next attempt is checked
+   fresh again. ── */
+let sizesNeedReview = false;
+let useStaleLocationData = false;
+let pendingSimOpts = null;
+['day-load','night-load'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ sizesNeedReview = true; }));
+
+function continueSimulation(){
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  const locationMismatch = !useStaleLocationData && nlrCache && !isNaN(lat) && !isNaN(lon) && (nlrCache.lat!==lat || nlrCache.lon!==lon);
+  if(locationMismatch){
+    document.getElementById('location-mismatch-modal').style.display = 'flex';
+    return;
+  }
+  if(sizesNeedReview){
+    document.getElementById('load-change-modal').style.display = 'flex';
+    return;
+  }
+  const opts = pendingSimOpts;
+  pendingSimOpts = null;
+  if(opts) performSimulation(opts);
+}
+
+function closeLoadChangeModal(){
+  document.getElementById('load-change-modal').style.display = 'none';
+  pendingSimOpts = null;
+}
+document.getElementById('load-change-modal-close').addEventListener('click', closeLoadChangeModal);
+document.getElementById('load-change-modal').addEventListener('click', e=>{
+  if(e.target.id==='load-change-modal') closeLoadChangeModal();
+});
+document.getElementById('load-change-modal-keep').addEventListener('click', ()=>{
+  sizesNeedReview = false;
+  document.getElementById('load-change-modal').style.display = 'none';
+  continueSimulation();
+});
+document.getElementById('load-change-modal-recommend').addEventListener('click', ()=>{
+  const dayWh = parseFloat(document.getElementById('day-load').value);
+  const nightWh = parseFloat(document.getElementById('night-load').value);
+  if(!isNaN(dayWh) && !isNaN(nightWh)){
+    const {pv, batt} = computeRecommendedSizes(dayWh, nightWh);
+    const pvEl = document.getElementById('pv-sizes'), battEl = document.getElementById('batt-sizes');
+    pvEl.value = pv.join(',');
+    battEl.value = batt.join(',');
+    pvEl.dispatchEvent(new Event('input', {bubbles:true}));
+    battEl.dispatchEvent(new Event('input', {bubbles:true}));
+  }
+  sizesNeedReview = false;
+  document.getElementById('load-change-modal').style.display = 'none';
+  continueSimulation();
+});
+
+/* ── Location-mismatch gate: "Yes" fetches fresh solar data for the new coordinates before
+   proceeding; "No" proceeds using the already-fetched (now-stale) data as-is. ── */
+function closeLocationMismatchModal(){
+  document.getElementById('location-mismatch-modal').style.display = 'none';
+  pendingSimOpts = null;
+}
+document.getElementById('location-mismatch-modal-close').addEventListener('click', closeLocationMismatchModal);
+document.getElementById('location-mismatch-modal').addEventListener('click', e=>{
+  if(e.target.id==='location-mismatch-modal') closeLocationMismatchModal();
+});
+document.getElementById('location-mismatch-modal-no').addEventListener('click', ()=>{
+  useStaleLocationData = true;
+  document.getElementById('location-mismatch-modal').style.display = 'none';
+  continueSimulation();
+});
+document.getElementById('location-mismatch-modal-yes').addEventListener('click', async ()=>{
+  document.getElementById('location-mismatch-modal').style.display = 'none';
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  if(isNaN(lat) || isNaN(lon)){ continueSimulation(); return; }
+  setSt(`Fetching new solar resource data for (${lat}, ${lon})…`);
+  try{
+    await ensureNlrData(lat, lon);
+    setSt('');
+  }catch(err){
+    setSt('');
+    setErr(`<strong>Error:</strong> ${err.message}<br><br>
+      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
+      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
+      NLR servers busy; invalid API key.`);
+    console.error(err);
+    pendingSimOpts = null;
+    return;
+  }
+  continueSimulation();
+});
+
 const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
 
@@ -730,12 +877,12 @@ function showHistogram(run){
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
 
   bins.forEach((count,i)=>{
     const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
@@ -744,8 +891,8 @@ function showHistogram(run){
     const lo = Math.round(i*BIN_WIDTH), hi = Math.round((i+1)*BIN_WIDTH);
     const fill = lo>=40 ? 'var(--bad)' : lo>=10 ? 'var(--warn)' : 'var(--good)';
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" fill-opacity=".85"><title>${lo}–${hi}%: ${count} day${count===1?'':'s'}</title></rect>`;
-    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
-    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
+    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
   });
 
   document.getElementById('histogram-title').textContent = `📊 Unmet Energy Distribution — ${run.pv} W / ${run.batt} Wh`;
@@ -784,12 +931,12 @@ function showUnmetKwhHistogram(run){
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Daily unmet energy (kWh)</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Daily unmet energy (kWh)</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
 
   bins.forEach((count,i)=>{
     const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
@@ -797,8 +944,8 @@ function showUnmetKwhHistogram(run){
     const h = M.t+plotH-y;
     const lo = (BIN_START+i*BIN_WIDTH).toFixed(2), hi = (BIN_START+(i+1)*BIN_WIDTH).toFixed(2);
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="var(--sun)" fill-opacity=".85"><title>${lo}–${hi} kWh: ${count} day${count===1?'':'s'}</title></rect>`;
-    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
-    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="9" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
+    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
   });
 
   document.getElementById('histogram-title').textContent = `🔻 Daily Unmet Energy — ${run.pv} W / ${run.batt} Wh`;
@@ -806,6 +953,15 @@ function showUnmetKwhHistogram(run){
   document.getElementById('histogram-chart').innerHTML = svg;
   document.getElementById('histogram-modal').style.display = 'flex';
 }
+function showSizeHint(msg){
+  document.getElementById('size-hint-modal-text').textContent = msg;
+  document.getElementById('size-hint-modal').style.display = 'flex';
+}
+document.getElementById('size-hint-modal-close').addEventListener('click', ()=>{ document.getElementById('size-hint-modal').style.display='none'; });
+document.getElementById('size-hint-modal-ok').addEventListener('click', ()=>{ document.getElementById('size-hint-modal').style.display='none'; });
+document.getElementById('size-hint-modal').addEventListener('click', e=>{
+  if(e.target.id==='size-hint-modal') document.getElementById('size-hint-modal').style.display='none';
+});
 document.getElementById('histogram-close').addEventListener('click', ()=>{ document.getElementById('histogram-modal').style.display='none'; });
 document.getElementById('histogram-modal').addEventListener('click', e=>{
   if(e.target.id==='histogram-modal') document.getElementById('histogram-modal').style.display='none';
@@ -1047,18 +1203,18 @@ function renderUnmetKwhScatter(){
     const x=xScale(t);
     const pct = annualLoadKwh>0 ? (t/annualLoadKwh*100) : 0;
     svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t.toFixed(1)}</text>`;
-    svg += `<text x="${x}" y="${M.t+plotH+31}" text-anchor="middle" font-size="10" fill="rgba(255,255,255,.44)" font-family="'Space Mono',monospace">${pct.toFixed(2)}%</text>`;
+    svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t.toFixed(1)}</text>`;
+    svg += `<text x="${x}" y="${M.t+plotH+31}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Mono',monospace">${pct.toFixed(2)}%</text>`;
   });
   yTicks.forEach(t=>{
     const y=yScale(t);
     svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="10" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
+    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">$${t.toLocaleString()}</text>`;
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Unmet kWh / year</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Unmet kWh / year</text>`;
+  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
   allRuns.forEach((run,i)=>{
     const unmetKwh = unmetKwhByIdx[i];
@@ -1438,12 +1594,19 @@ async function fetchSolarData(){
 }
 document.getElementById('btn-run').addEventListener('click', fetchSolarData);
 
-/* ── Main: simulates every PV × battery combination, reusing cached NSRDB data if the
+/* ── Entry point for every simulation attempt: hands off to continueSimulation(), which
+   gates on the location- and load-change prompts before performSimulation() actually runs. ── */
+async function runSimulation(opts={scroll:true}){
+  pendingSimOpts = opts;
+  continueSimulation();
+}
+
+/* ── Simulates every PV × battery combination, reusing cached NSRDB data if the
    coordinates match, waiting on a fetch already in flight if one's running for these
    coordinates, or starting a new fetch otherwise (e.g. after a map click or place search
    changes the location) — the sticky #status banner makes that fetch visible regardless
    of where on the page the input card that triggered it is. ── */
-async function runSimulation({scroll=true}={}){
+async function performSimulation({scroll=true}={}){
   setErr('');
   const lat=parseFloat(document.getElementById('lat').value);
   const lon=parseFloat(document.getElementById('lon').value);
@@ -1467,13 +1630,16 @@ async function runSimulation({scroll=true}={}){
   for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
   let dataPromise;
-  if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
+  if(useStaleLocationData && nlrCache){
+    dataPromise = Promise.resolve(nlrCache);
+  }else if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
     dataPromise = Promise.resolve(nlrCache);
   }else if(nlrFetch && nlrFetch.lat===lat && nlrFetch.lon===lon){
     dataPromise = nlrFetch.promise;
   }else{
     dataPromise = ensureNlrData(lat, lon);
   }
+  useStaleLocationData = false;
 
   document.getElementById('results').style.display='none';
   const btn=document.getElementById('btn-run'); btn.disabled=true;
@@ -1494,6 +1660,13 @@ async function runSimulation({scroll=true}={}){
     });
     // default selection to the config with the least unmet energy
     activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> computeTotalUnmetKwh(run)<computeTotalUnmetKwh(arr[bi])?i:bi, 0);
+
+    const unmetPcts = allRuns.map(run=> computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100);
+    if(!unmetPcts.some(p=>p>1)){
+      showSizeHint('Add smaller PV and battery sizes');
+    }else if(!unmetPcts.some(p=>p<1)){
+      showSizeHint('Add larger PV and battery sizes');
+    }
 
     setSt('');
     document.getElementById('results').style.display='block';
