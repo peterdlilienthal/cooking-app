@@ -50,6 +50,11 @@
   .btn-run:hover:not(:disabled){opacity:.9;transform:translateY(-1px);}
   .btn-run:disabled{opacity:.4;cursor:not-allowed;}
 
+  #location-drift-warning{display:none;background:rgba(245,166,35,.15);border:1px solid rgba(245,166,35,.5);border-radius:10px;padding:11px 14px;font-size:14px;color:var(--sun);margin-top:0;margin-bottom:10px;line-height:1.5;}
+  .csv-btn:disabled,.csv-btn.btn-blocked{opacity:.4;cursor:not-allowed;}
+  .year-picker-btn{width:100%;text-align:left;padding:10px 14px;}
+  .year-picker-btn.synthetic-year{border-color:var(--sun);background:rgba(245,166,35,.18);}
+
   #status{display:none;position:sticky;top:0;z-index:20;text-align:center;padding:16px;font-size:15px;font-weight:600;color:var(--white);background:var(--night);border-bottom:2px solid var(--sun);box-shadow:0 6px 18px rgba(0,0,0,.35);}
   .spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
@@ -76,16 +81,18 @@
 
   .mtbl{width:100%;border-collapse:collapse;font-size:15px;}
   .mtbl th{text-align:left;padding:7px 10px;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:rgba(255,255,255,.54);border-bottom:1px solid rgba(255,255,255,.07);font-weight:500;}
-  .mtbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);}
+  .mtbl td{padding:8px 10px;border-bottom:1px solid rgba(255,255,255,.05);white-space:nowrap;}
   .mtbl tr:last-child td{border-bottom:none;}
   .mtbl tr[data-idx]{cursor:pointer;}
   .mtbl tr[data-idx]:hover{background:rgba(255,255,255,.03);}
+  .mtbl tr[data-idx].frontier-row td{color:#27AE60;}
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
+  .assumptions-list{list-style:disc;padding-left:20px;font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;}
   .matrix-tbl{table-layout:fixed;min-width:100%;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
@@ -106,7 +113,7 @@
   <div class="sun-icon"></div>
   <div>
     <h1>Off-Grid Solar Simulator</h1>
-    <p>Hourly GHI from NLR NSRDB · auto-discovered dataset &amp; year</p>
+    <p>Hourly GHI from NLR NSRDB · auto-discovered dataset, pick your year</p>
   </div>
   <div class="badge">NLR NSRDB</div>
 </header>
@@ -127,6 +134,7 @@
         <span class="hint">e.g. 36.82 = Nairobi, Kenya</span>
       </div>
     </div>
+    <p class="cmp-hint" id="data-year-display" style="display:none;margin-top:10px;"></p>
     <div class="field" style="margin-top:14px;">
       <label>Or search by place name</label>
       <div style="display:flex;gap:8px;">
@@ -149,9 +157,6 @@
     <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
   </div>
 
-  <div class="run-controls-bar" id="run-controls">
-    <button class="btn-run" id="btn-run">Fetch solar resource data</button>
-  </div>
   <div id="status"></div>
   <div id="error-msg"></div>
 
@@ -210,18 +215,12 @@
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
+  <div class="run-controls-bar" id="run-controls">
+    <p id="location-drift-warning">⚠️ The location has changed since the last simulation. Results still reflect the old location — run the simulation again to update them.</p>
+    <button class="btn-run" id="btn-run">Run Simulation</button>
+  </div>
+
   <div id="results">
-    <div class="card" id="chart-card">
-      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
-        <span>📄 Word Report</span>
-        <div style="display:flex;align-items:center;gap:10px;">
-          <span class="cmp-hint" id="report-name-display" style="margin:0;"></span>
-          <input type="hidden" id="report-name">
-          <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
-        </div>
-      </div>
-      <p class="cmp-hint">Downloads a .doc report with your inputs, the Cost vs. Unmet kWh/Year chart, the Day-by-Day Calendar, the highlighted configuration's cost and unmet kWh/year, and both the Unmet kWh/Year and Total Cost matrices.</p>
-    </div>
     <div class="card">
       <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
       <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 396" style="width:100%;height:auto;min-width:480px;"></svg></div>
@@ -252,11 +251,31 @@
       <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
       <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to highlight the same configuration in the tables below.</p>
     </div>
+    <div class="card" id="chart-card">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span>📄 Word Report</span>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <span class="cmp-hint" id="report-name-display" style="margin:0;"></span>
+          <input type="hidden" id="report-name">
+          <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+        </div>
+      </div>
+      <p class="cmp-hint">Downloads a .doc report with your inputs, the Cost vs. Unmet kWh/Year chart, the Day-by-Day Calendar, the highlighted configuration's cost and unmet kWh/year, both the Unmet kWh/Year and Total Cost matrices, and a list of the simulation's assumptions.</p>
+    </div>
     <div class="card">
       <div class="card-title">⚖️ Configuration Comparison</div>
       <div style="overflow-x:auto"><table class="mtbl" id="cmp-tbl"></table></div>
       <p class="cmp-hint">Click a row to highlight the same configuration in the charts and tables above, and update the calendar below.</p>
     </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">📋 Assumptions</div>
+    <ul class="assumptions-list">
+      <li>PV panels are assumed to lie flat horizontally and are derated to 80%.</li>
+      <li>The battery is controlled to have a minimum state of charge of 10%, and a round trip efficiency of 95%.</li>
+      <li>The demand is spread evenly within the 2 demand periods.</li>
+    </ul>
   </div>
 </div>
 
@@ -304,17 +323,14 @@
   </div>
 </div>
 
-<div id="location-mismatch-modal" class="modal-overlay" style="display:none;">
+<div id="year-picker-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card" style="max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:0;">📍 Location Changed</div>
-      <button class="modal-close" id="location-mismatch-modal-close" type="button">&times;</button>
+      <div class="card-title" style="margin-bottom:0;">📅 Select a Year</div>
+      <button class="modal-close" id="year-picker-modal-close" type="button">&times;</button>
     </div>
-    <p class="cmp-hint" style="margin:0;">Solar data does not match the location. Fetch new data?</p>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-      <button class="csv-btn" id="location-mismatch-modal-no" type="button">No</button>
-      <button class="csv-btn" id="location-mismatch-modal-yes" type="button">Yes</button>
-    </div>
+    <p class="cmp-hint" style="margin:0 0 14px;">Dataset: <span id="year-picker-dataset"></span></p>
+    <div id="year-picker-list" style="display:flex;flex-direction:column;gap:8px;max-height:340px;overflow-y:auto;"></div>
   </div>
 </div>
 
@@ -336,8 +352,16 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
 let activeCfgIdx = 0;    // which config is highlighted across the charts and tables (defaults to lowest-unmet-kWh after a run)
+let lastSimLat = null, lastSimLon = null, lastSimYear = null;  // coordinates/year the current allRuns/report were actually simulated for
+
+/* ── NSRDB's TMY/TGY (Typical Meteorological/Global Year) aren't real calendar years — each is
+   stitched together from the most representative months across the historical record (TMY
+   weighted across several parameters, TGY by GHI alone). They carry no real year number, so
+   `year` is either a real number or one of the literal strings 'tmy'/'tgy'. ── */
+function isSyntheticYear(year){ return year==='tmy' || year==='tgy'; }
+function formatYearLabel(year){ return isSyntheticYear(year) ? year.toUpperCase() : String(year); }
 let nlrCache = null;     // {lat,lon,hourly,meta,datasetName,displayName,year,interval} for the last-fetched location — avoids re-hitting NLR when only load/PV/battery/cost inputs change
-let nlrFetch = null;     // {lat,lon,promise} for a fetch currently in flight (started by the Fetch button), so Enter-triggered simulation can wait on it instead of racing a duplicate request
+let nlrFetch = null;     // {lat,lon,promise} for a fetch currently in flight, so a concurrent simulation trigger can wait on it instead of racing a duplicate request
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
@@ -379,6 +403,52 @@ let mapCenter = {
   lat: parseFloat(document.getElementById('lat').value) || 20,
   lon: parseFloat(document.getElementById('lon').value) || 0
 };
+let placeSearchCoords = null;  // {lat,lon} the place-search field's text was resolved to; cleared if lat/lon later drift away from it
+
+/* Clears the place-search text whenever lat/lon no longer match what it was geocoded to (manual edit, map click, etc). */
+function clearPlaceNameIfStale(){
+  if(!placeSearchCoords) return;
+  const input = document.getElementById('place-search');
+  if(!input.value.trim()) return;
+  const lat = parseFloat(document.getElementById('lat').value), lon = parseFloat(document.getElementById('lon').value);
+  if(Math.abs(lat - placeSearchCoords.lat) > 0.00005 || Math.abs(lon - placeSearchCoords.lon) > 0.00005){
+    input.value = '';
+    document.getElementById('place-search-status').textContent = '';
+    placeSearchCoords = null;
+  }
+}
+['lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', clearPlaceNameIfStale));
+
+/* ── Warns above the Run button, and blocks the Word Report download, whenever lat/lon no
+   longer match the coordinates the current results (allRuns) were actually simulated for.
+   lastSimLat/lastSimLon are null until the first successful run, so nothing shows before then.
+   The Report button is styled as blocked but stays clickable (not the `disabled` attribute) so
+   openReportNameModal() can still pop up an explanation when it's clicked. ── */
+const LOCATION_DRIFT_MSG = 'The location has changed since the last simulation. Results still reflect the old location — run the simulation again to update them.';
+document.getElementById('location-drift-warning').textContent = `⚠️ ${LOCATION_DRIFT_MSG}`;
+
+function locationHasDrifted(){
+  if(lastSimLat===null || lastSimLon===null) return false;
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  return isNaN(lat) || isNaN(lon) || lat!==lastSimLat || lon!==lastSimLon;
+}
+function updateLocationDriftWarning(){
+  const drifted = locationHasDrifted();
+  document.getElementById('location-drift-warning').style.display = drifted ? 'block' : 'none';
+  const reportBtn = document.getElementById('btn-report');
+  reportBtn.classList.toggle('btn-blocked', drifted);
+  reportBtn.title = drifted ? LOCATION_DRIFT_MSG : '';
+
+  const yearEl = document.getElementById('data-year-display');
+  if(drifted || lastSimYear===null){
+    yearEl.style.display = 'none';
+  }else{
+    yearEl.textContent = `📅 Data year: ${formatYearLabel(lastSimYear)}`;
+    yearEl.style.display = 'block';
+  }
+}
+['lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', updateLocationDriftWarning));
 
 function lonLatToWorldPx(lon, lat, zoom){
   const scale = TILE_SIZE * Math.pow(2, zoom);
@@ -510,6 +580,7 @@ async function searchPlaceName(){
     const lat = clampLat(parseFloat(results[0].lat)), lon = normLon(parseFloat(results[0].lon));
     document.getElementById('lat').value = lat.toFixed(4);
     document.getElementById('lon').value = lon.toFixed(4);
+    placeSearchCoords = {lat: parseFloat(lat.toFixed(4)), lon: parseFloat(lon.toFixed(4))};
     document.getElementById('lat').dispatchEvent(new Event('input', {bubbles:true}));
     document.getElementById('lon').dispatchEvent(new Event('input', {bubbles:true}));
     mapCenter = {lat, lon};
@@ -562,41 +633,32 @@ function computeRecommendedSizes(dayWh, nightWh){
   return {pv, batt};
 }
 
-/* ── Gates in front of every simulation attempt: if the location or the load changed since
-   the solar data / sizes were last confirmed, ask before running anything. Each gate's modal
-   resolves back into continueSimulation(), which re-checks and either shows the next gate or
-   (once clear) runs performSimulation() with the opts the original attempt was made with.
-   The location gate compares the cached data's coordinates against the current fields fresh
-   on every attempt (not a one-shot dirty flag), so it keeps asking on every attempt made with
-   stale data — e.g. after answering "No" once — not just the first attempt after a change.
-   useStaleLocationData is a one-attempt bypass: set by "No" so *this* attempt proceeds on the
-   old data, then consumed and cleared inside performSimulation so the next attempt is checked
-   fresh again. ── */
+/* ── Gate in front of every simulation attempt: if the load changed since the sizes were
+   last confirmed, ask before running anything. The modal resolves back into
+   continueSimulation(), which re-checks and either shows the modal again or (once clear)
+   runs performSimulation() with the opts the original attempt was made with. Location
+   changes are not gated — performSimulation() just fetches fresh data automatically
+   whenever the current coordinates don't match the cached data's. ── */
 let sizesNeedReview = false;
-let useStaleLocationData = false;
 let pendingSimOpts = null;
+let simRunning = false;
 ['day-load','night-load'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ sizesNeedReview = true; }));
 
 function continueSimulation(){
-  const lat = parseFloat(document.getElementById('lat').value);
-  const lon = parseFloat(document.getElementById('lon').value);
-  const locationMismatch = !useStaleLocationData && nlrCache && !isNaN(lat) && !isNaN(lon) && (nlrCache.lat!==lat || nlrCache.lon!==lon);
-  if(locationMismatch){
-    document.getElementById('location-mismatch-modal').style.display = 'flex';
-    return;
-  }
   if(sizesNeedReview){
     document.getElementById('load-change-modal').style.display = 'flex';
     return;
   }
   const opts = pendingSimOpts;
   pendingSimOpts = null;
-  if(opts) performSimulation(opts);
+  if(opts) performSimulation(opts).finally(()=>{ simRunning = false; });
+  else simRunning = false;
 }
 
 function closeLoadChangeModal(){
   document.getElementById('load-change-modal').style.display = 'none';
   pendingSimOpts = null;
+  simRunning = false;
 }
 document.getElementById('load-change-modal-close').addEventListener('click', closeLoadChangeModal);
 document.getElementById('load-change-modal').addEventListener('click', e=>{
@@ -623,49 +685,29 @@ document.getElementById('load-change-modal-recommend').addEventListener('click',
   continueSimulation();
 });
 
-/* ── Location-mismatch gate: "Yes" fetches fresh solar data for the new coordinates before
-   proceeding; "No" proceeds using the already-fetched (now-stale) data as-is. ── */
-function closeLocationMismatchModal(){
-  document.getElementById('location-mismatch-modal').style.display = 'none';
-  pendingSimOpts = null;
-}
-document.getElementById('location-mismatch-modal-close').addEventListener('click', closeLocationMismatchModal);
-document.getElementById('location-mismatch-modal').addEventListener('click', e=>{
-  if(e.target.id==='location-mismatch-modal') closeLocationMismatchModal();
-});
-document.getElementById('location-mismatch-modal-no').addEventListener('click', ()=>{
-  useStaleLocationData = true;
-  document.getElementById('location-mismatch-modal').style.display = 'none';
-  continueSimulation();
-});
-document.getElementById('location-mismatch-modal-yes').addEventListener('click', async ()=>{
-  document.getElementById('location-mismatch-modal').style.display = 'none';
-  const lat = parseFloat(document.getElementById('lat').value);
-  const lon = parseFloat(document.getElementById('lon').value);
-  if(isNaN(lat) || isNaN(lon)){ continueSimulation(); return; }
-  setSt(`Fetching new solar resource data for (${lat}, ${lon})…`);
-  try{
-    await ensureNlrData(lat, lon);
-    setSt('');
-  }catch(err){
-    setSt('');
-    setErr(`<strong>Error:</strong> ${err.message}<br><br>
-      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
-      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
-      NLR servers busy; invalid API key.`);
-    console.error(err);
-    pendingSimOpts = null;
-    return;
-  }
-  continueSimulation();
-});
-
 const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
 
 const PROXY_DOWN_MSG = 'Could not reach the local proxy. Make sure nlr_proxy.py is running:\n\n    python nlr_proxy.py';
+function proxyDownError(){
+  const e = new Error(PROXY_DOWN_MSG);
+  e.proxyDown = true;
+  return e;
+}
+/* ── Renders a fetch/simulation error for #error-msg. Proxy-unreachable errors already
+   say what to do (start the proxy); anything else is an NLR-side failure, so show the
+   coverage/API-key causes instead — showing both regardless of which actually applies
+   just buries the real cause in irrelevant advice. ── */
+function fetchErrorHtml(err){
+  const extra = err.proxyDown ? '' : `<br><br>
+      <strong>Possible causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
+      NLR servers busy; invalid API key.`;
+  return `<strong>Error:</strong> ${err.message}${extra}`;
+}
 
-/* ── Discover which dataset/year covers this location ── */
+/* ── Discover which dataset covers this location and every year (including TMY) it has
+   data for — the caller (ensureNlrData) shows these to the user to pick from, rather than
+   silently grabbing the most recent year. ── */
 async function discoverDataset(lat, lon) {
   const params = new URLSearchParams({
     wkt: `POINT(${lon} ${lat})`,
@@ -679,7 +721,7 @@ async function discoverDataset(lat, lon) {
     resp = await fetch(proxyUrl);
     json = await resp.json();
   } catch(e) {
-    throw new Error(PROXY_DOWN_MSG);
+    throw proxyDownError();
   }
   if (json.errors && json.errors.length) throw new Error(json.errors.join(', '));
 
@@ -689,14 +731,73 @@ async function discoverDataset(lat, lon) {
   const ds = outputs.find(o => /goes-aggregated-v4/i.test(o.name)) || outputs[0];
   if (!ds) throw new Error('No NSRDB dataset covers this location. NSRDB covers the Americas, Europe, and Africa (roughly ±60° latitude).');
 
-  const years = (ds.availableYears || []).filter(y => y !== 'tmy').map(Number).filter(y => !isNaN(y));
-  if (!years.length) throw new Error(`No yearly (non-TMY) data available for "${ds.displayName || ds.name}" at this location.`);
-  const year = Math.max(...years);
+  const years = (ds.availableYears || []).map(Number).filter(y => !isNaN(y)).sort((a,b)=>b-a);
+
+  // TMY/TGY aren't folded into the primary dataset's availableYears — NREL publishes each as
+  // its own sibling dataset/output (e.g. nsrdb-GOES-tmy-v4-0-0 next to
+  // nsrdb-GOES-aggregated-v4-0-0, or nsrdb-msg-v1-0-0-tmy/-tgy next to nsrdb-msg-v1-0-0), each
+  // with its own name and interval. Find them by scanning every output for one whose years
+  // include the literal key ('tmy' or 'tgy').
+  const findSyntheticYearDataset = key => {
+    const match = outputs.find(o => (o.availableYears||[]).some(y => String(y).toLowerCase()===key));
+    if (!match) return null;
+    const matchIntervals = match.availableIntervals && match.availableIntervals.length ? match.availableIntervals : [60];
+    return {
+      datasetName: match.name,
+      displayName: match.displayName || match.name,
+      interval: matchIntervals.includes(60) ? 60 : matchIntervals[0]
+    };
+  };
+  const tmy = findSyntheticYearDataset('tmy');
+  const tgy = findSyntheticYearDataset('tgy');
+
+  if (!years.length && !tmy && !tgy) throw new Error(`No yearly, TMY, or TGY data available for "${ds.displayName || ds.name}" at this location.`);
 
   const intervals = ds.availableIntervals && ds.availableIntervals.length ? ds.availableIntervals : [60];
   const interval = intervals.includes(60) ? 60 : intervals[0];
 
-  return { datasetName: ds.name, displayName: ds.displayName || ds.name, year, interval };
+  return { datasetName: ds.name, displayName: ds.displayName || ds.name, years, interval, tmy, tgy };
+}
+
+/* ── Shows the year-picker modal (years plus TMY/TGY, if available) and resolves once the
+   user picks one. Rejects with a `.cancelled` error if they close it without choosing, so the
+   caller can abort the fetch quietly instead of showing a scary error banner. ── */
+function pickYear(datasetLabel, years, tmy, tgy){
+  return new Promise((resolve, reject)=>{
+    const list = document.getElementById('year-picker-list');
+    list.innerHTML = '';
+    const addOption = (value, label, isSynthetic)=>{
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'csv-btn year-picker-btn' + (isSynthetic ? ' synthetic-year' : '');
+      btn.textContent = label;
+      btn.addEventListener('click', ()=>{
+        modal.style.display = 'none';
+        resolve(value);
+      });
+      list.appendChild(btn);
+    };
+    const addSyntheticOption = (value, name, full, ds)=>{
+      const label = ds.displayName===datasetLabel ? `${name} — ${full}` : `${name} — ${full} (${ds.displayName})`;
+      addOption(value, label, true);
+    };
+    if(tgy) addSyntheticOption('tgy', 'TGY', 'Typical Global Year', tgy);
+    if(tmy) addSyntheticOption('tmy', 'TMY', 'Typical Meteorological Year', tmy);
+    years.forEach(y => addOption(y, String(y), false));
+
+    document.getElementById('year-picker-dataset').textContent = datasetLabel;
+    const modal = document.getElementById('year-picker-modal');
+    modal.style.display = 'flex';
+
+    const cancel = ()=>{
+      modal.style.display = 'none';
+      const err = new Error('Year selection cancelled.');
+      err.cancelled = true;
+      reject(err);
+    };
+    document.getElementById('year-picker-modal-close').onclick = cancel;
+    modal.onclick = e => { if(e.target.id==='year-picker-modal') cancel(); };
+  });
 }
 
 /* ── Parse NSRDB CSV ── */
@@ -775,7 +876,7 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
     resp = await fetch(proxyUrl);
     text = await resp.text();
   } catch(e) {
-    throw new Error(PROXY_DOWN_MSG);
+    throw proxyDownError();
   }
 
   if(!resp.ok && !text.trim().startsWith('{'))
@@ -794,7 +895,7 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
   const pEff   = 0.80;
   let   batWh  = capWh*0.5;
 
-  const isLeap=year%4===0;
+  const isLeap=!isSyntheticYear(year) && year%4===0;  // TMY/TGY have no leap day — each is a synthetic 365-day year
   const dim=[31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
   const results=[];
   const hourlyLog=[];
@@ -846,59 +947,11 @@ function exportHourlyCSV(run){
   const url=URL.createObjectURL(blob);
   const a=document.createElement('a');
   a.href=url;
-  a.download=`solar_sim_${run.pv}W_${run.batt}Wh_${run.year}.csv`;
+  a.download=`solar_sim_${run.pv}W_${run.batt}Wh_${formatYearLabel(run.year)}.csv`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
-}
-
-/* ── Histogram: days by % unmet energy, for one config ── */
-function showHistogram(run){
-  const W=640, H=380, M={l:56,r:20,t:20,b:56};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
-
-  const BIN_COUNT=10, BIN_WIDTH=100/BIN_COUNT;
-  const bins = new Array(BIN_COUNT).fill(0);
-  run.results.forEach(r=>{
-    const unmetPct = (1-r.frac)*100;
-    const idx = Math.min(BIN_COUNT-1, Math.max(0, Math.floor(unmetPct/BIN_WIDTH)));
-    bins[idx]++;
-  });
-  const maxCount = Math.max(...bins, 1);
-  const yMax = Math.ceil(maxCount*1.15/5)*5 || 5;
-
-  const xScale = i => M.l + (i/BIN_COUNT)*plotW;
-  const yScale = v => M.t + plotH - (v/yMax)*plotH;
-  const barW = (plotW/BIN_COUNT)*0.78;
-
-  let svg = '';
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yMax*i/5));
-  yTicks.forEach(t=>{
-    const y=yScale(t);
-    svg += `<line x1="${M.l}" y1="${y}" x2="${M.l+plotW}" y2="${y}" stroke="rgba(255,255,255,.06)"/>`;
-    svg += `<text x="${M.l-10}" y="${y+4}" text-anchor="end" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t}</text>`;
-  });
-  svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">% of daily energy unmet</text>`;
-  svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
-
-  bins.forEach((count,i)=>{
-    const x = xScale(i) + ((plotW/BIN_COUNT)-barW)/2;
-    const y = yScale(count);
-    const h = M.t+plotH-y;
-    const lo = Math.round(i*BIN_WIDTH), hi = Math.round((i+1)*BIN_WIDTH);
-    const fill = lo>=40 ? 'var(--bad)' : lo>=10 ? 'var(--warn)' : 'var(--good)';
-    svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="${fill}" fill-opacity=".85"><title>${lo}–${hi}%: ${count} day${count===1?'':'s'}</title></rect>`;
-    if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
-    svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
-  });
-
-  document.getElementById('histogram-title').textContent = `📊 Unmet Energy Distribution — ${run.pv} W / ${run.batt} Wh`;
-  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily unmet energy; height is the number of days that fell in that range.';
-  document.getElementById('histogram-chart').innerHTML = svg;
-  document.getElementById('histogram-modal').style.display = 'flex';
 }
 
 /* ── Histogram: days by daily unmet energy (kWh), for one config ── */
@@ -1048,19 +1101,21 @@ function renderFrontierTable(){
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
   const best = allRuns.reduce((a,b)=> computeTotalUnmetKwh(b)<computeTotalUnmetKwh(a) ? b : a);
+  const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(run=>run.cost));
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const soc = computeSocExtremeDays(run);
       const star = run===best ? ' ★' : '';
-      const activeCls = i===activeCfgIdx ? ' active-row' : '';
-      return `<tr data-idx="${i}" class="${activeCls}">
+      const rowCls = (i===activeCfgIdx ? ' active-row' : '') + (isFrontier[i] ? ' frontier-row' : '');
+      return `<tr data-idx="${i}" class="${rowCls}">
+        <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
         <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(computeTotalUnmetKwh(run))}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
-        <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn hist-btn" data-idx="${i}" type="button">📊 Histogram</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
+        <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
       </tr>`;
     }).join('') + '</tbody>';
 
@@ -1075,16 +1130,10 @@ function renderComparison(){
       renderCalendar();
     });
   });
-  tbl.querySelectorAll('.csv-btn:not(.hist-btn):not(.unmet-kwh-hist-btn)').forEach(btn=>{
+  tbl.querySelectorAll('.csv-btn:not(.unmet-kwh-hist-btn)').forEach(btn=>{
     btn.addEventListener('click', (e)=>{
       e.stopPropagation();
       exportHourlyCSV(allRuns[+btn.dataset.idx]);
-    });
-  });
-  tbl.querySelectorAll('.hist-btn').forEach(btn=>{
-    btn.addEventListener('click', (e)=>{
-      e.stopPropagation();
-      showHistogram(allRuns[+btn.dataset.idx]);
     });
   });
   tbl.querySelectorAll('.unmet-kwh-hist-btn').forEach(btn=>{
@@ -1245,7 +1294,7 @@ function renderUnmetKwhScatter(){
 function renderCalendar(){
   const run = allRuns[activeCfgIdx];
   const {pv, batt, results, year} = run;
-  const isLeap = year%4===0;
+  const isLeap = !isSyntheticYear(year) && year%4===0;
   const dim = [31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
 
   document.getElementById('cal-label').textContent = `${pv} W · ${batt} Wh`;
@@ -1334,7 +1383,7 @@ function buildReportUnmetKwhScatterCanvas(){
 /* ── Report: light-theme redraw of the day-by-day calendar onto a canvas (for the Word export) ── */
 function buildReportCalendarCanvas(run){
   const {pv, batt, results, year} = run;
-  const isLeap = year%4===0;
+  const isLeap = !isSyntheticYear(year) && year%4===0;
   const dim = [31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
 
   const cell=20, labelW=54, M={l:20,t:56,r:20,b:70};
@@ -1411,7 +1460,7 @@ function downloadWordReport(){
     ['Cost per watt (PV)', `$${g('cost-pv-w')}`],
     ['Cost per kWh (battery)', `$${g('cost-batt-kwh')}`],
     ['Inverter, controls & misc', `$${g('cost-fixed')}`],
-    ['Data source', `${allRuns[0].datasetLabel} \u2014 ${allRuns[0].year}`]
+    ['Data source', `${allRuns[0].datasetLabel} \u2014 ${formatYearLabel(allRuns[0].year)}`]
   ];
 
   const esc = s => String(s).replace(/[\\{}]/g,c=>'\\'+c).replace(/[^\x00-\x7F]/g,c=>'\\u'+c.charCodeAt(0)+'?');
@@ -1448,6 +1497,13 @@ function downloadWordReport(){
   };
   const costRows = buildMatrixRows(run => '$'+Math.round(run.cost).toLocaleString());
   const unmetKwhRows = buildMatrixRows(run => formatUnmetKwh(computeTotalUnmetKwh(run)));
+
+  const ASSUMPTIONS = [
+    'PV panels are assumed to lie flat horizontally and are derated to 80%.',
+    'The battery is controlled to have a minimum state of charge of 10%, and a round trip efficiency of 95%.',
+    'The demand is spread evenly within the 2 demand periods.'
+  ];
+  const assumptionRows = ASSUMPTIONS.map(a => `\\pard\\li420\\fi-420 ${esc('•')}\\tab ${esc(a)}\\par`).join('\n');
 
   // Highlighted configuration
   const activeRun = allRuns[activeCfgIdx];
@@ -1498,6 +1554,9 @@ ${unmetKwhRows}
 \\pard\\par
 \\pard\\keepn\\fs24\\b Total Cost Matrix\\b0\\fs20\\par
 ${costRows}
+\\pard\\par
+\\pard\\keepn\\fs24\\b Assumptions\\b0\\fs20\\par
+${assumptionRows}
 }`;
 
   const blob = new Blob([rtf], {type:'application/rtf'});
@@ -1513,6 +1572,7 @@ ${costRows}
 /* ── Report naming modal: one place to set the browser field, file name, and doc headers together ── */
 function openReportNameModal(){
   if(!allRuns || !allRuns.length){ setErr('Run a simulation first, then download the report.'); return; }
+  if(locationHasDrifted()){ showSizeHint(LOCATION_DRIFT_MSG); return; }
   const current = document.getElementById('report-name').value;
   const modalInput = document.getElementById('report-name-modal-input');
   modalInput.value = current || `Solar Report ${new Date().toISOString().slice(0,10)}`;
@@ -1545,7 +1605,7 @@ document.getElementById('report-name-modal-input').addEventListener('keydown', e
 
 /* ── Discover + fetch NSRDB hourly data for a location, caching the result and tracking
    the in-flight request in nlrFetch so a concurrent Enter-triggered simulate can wait on
-   it instead of racing a duplicate NLR request. Only the Fetch button calls this. ── */
+   it instead of racing a duplicate NLR request. ── */
 async function ensureNlrData(lat, lon){
   if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
     setSt(`Reusing cached NSRDB data for (${lat}, ${lon}) — coordinates unchanged, skipping NLR request…`);
@@ -1553,14 +1613,23 @@ async function ensureNlrData(lat, lon){
     return nlrCache;
   }
   const promise = (async ()=>{
-    setSt(`Discovering the latest NSRDB dataset for (${lat}, ${lon})…`);
-    const {datasetName, displayName, year, interval} = await discoverDataset(lat, lon);
+    setSt(`Discovering available years for (${lat}, ${lon})…`);
+    const {datasetName, displayName, years, interval, tmy, tgy} = await discoverDataset(lat, lon);
 
-    setSt(`Fetching ${year} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
-    const {hourly, meta} = await fetchNLR(lat, lon, NLR_EMAIL, datasetName, year, interval);
+    setSt('');
+    const year = await pickYear(displayName, years, tmy, tgy);
+
+    // TMY/TGY each live in their own sibling dataset (own name + interval), not the primary
+    // dataset picked above — use that instead when the user chose one of them.
+    const syntheticDs = year==='tmy' ? tmy : year==='tgy' ? tgy : null;
+    const fetchDatasetName = syntheticDs ? syntheticDs.datasetName : datasetName;
+    const fetchInterval    = syntheticDs ? syntheticDs.interval    : interval;
+
+    setSt(`Fetching ${formatYearLabel(year)} hourly GHI (${displayName}) via local proxy → NLR NSRDB… 15–30 seconds`);
+    const {hourly, meta} = await fetchNLR(lat, lon, NLR_EMAIL, fetchDatasetName, year, fetchInterval);
     if(hourly.length<8000) throw new Error(`Only ${hourly.length} records returned (expected ~8760). Check coordinates — NSRDB covers most of Americas, Europe, and Asia.`);
 
-    nlrCache = {lat, lon, datasetName, displayName, year, interval, hourly, meta};
+    nlrCache = {lat, lon, datasetName: fetchDatasetName, displayName, year, interval: fetchInterval, hourly, meta};
     return nlrCache;
   })();
   nlrFetch = {lat, lon, promise};
@@ -1571,32 +1640,16 @@ async function ensureNlrData(lat, lon){
   }
 }
 
-/* ── "Fetch solar resource data" button: discovers/downloads NSRDB data for the
-   current coordinates and caches it. Does not simulate. ── */
-async function fetchSolarData(){
-  setErr('');
-  const lat=parseFloat(document.getElementById('lat').value);
-  const lon=parseFloat(document.getElementById('lon').value);
-  if(isNaN(lat)||isNaN(lon)){ setErr('Please fill in latitude and longitude.'); return; }
-
-  const btn=document.getElementById('btn-run'); btn.disabled=true;
-  try{
-    const {hourly, displayName, year} = await ensureNlrData(lat, lon);
-    setSt(`✓ Fetched ${hourly.length} hourly GHI readings for ${displayName} (${year}). Press Enter in any input to simulate.`, {spinner:false});
-  }catch(err){
-    setSt('');
-    setErr(`<strong>Error:</strong> ${err.message}<br><br>
-      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
-      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
-      NLR servers busy; invalid API key.`);
-    console.error(err);
-  }finally{btn.disabled=false;}
-}
-document.getElementById('btn-run').addEventListener('click', fetchSolarData);
-
 /* ── Entry point for every simulation attempt: hands off to continueSimulation(), which
-   gates on the location- and load-change prompts before performSimulation() actually runs. ── */
+   gates on the location- and load-change prompts before performSimulation() actually runs.
+   simRunning guards against re-entrancy — this function is never awaited by its callers
+   (the button click, or Enter in any input, which auto-repeats while held), so without this
+   flag every trigger while one attempt is still in flight would start a fully independent,
+   overlapping attempt: duplicate 8,760-hour simulation loops, and if the location changed
+   mid-flight, two real NLR fetches for two different places racing to render. ── */
 async function runSimulation(opts={scroll:true}){
+  if(simRunning) return;
+  simRunning = true;
   pendingSimOpts = opts;
   continueSimulation();
 }
@@ -1630,16 +1683,13 @@ async function performSimulation({scroll=true}={}){
   for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
   let dataPromise;
-  if(useStaleLocationData && nlrCache){
-    dataPromise = Promise.resolve(nlrCache);
-  }else if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
+  if(nlrCache && nlrCache.lat===lat && nlrCache.lon===lon){
     dataPromise = Promise.resolve(nlrCache);
   }else if(nlrFetch && nlrFetch.lat===lat && nlrFetch.lon===lon){
     dataPromise = nlrFetch.promise;
   }else{
     dataPromise = ensureNlrData(lat, lon);
   }
-  useStaleLocationData = false;
 
   document.getElementById('results').style.display='none';
   const btn=document.getElementById('btn-run'); btn.disabled=true;
@@ -1660,6 +1710,8 @@ async function performSimulation({scroll=true}={}){
     });
     // default selection to the config with the least unmet energy
     activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> computeTotalUnmetKwh(run)<computeTotalUnmetKwh(arr[bi])?i:bi, 0);
+    lastSimLat = lat; lastSimLon = lon; lastSimYear = year;
+    updateLocationDriftWarning();
 
     const unmetPcts = allRuns.map(run=> computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100);
     if(!unmetPcts.some(p=>p>1)){
@@ -1679,15 +1731,12 @@ async function performSimulation({scroll=true}={}){
     if(scroll) document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
-    setErr(`<strong>Error:</strong> ${err.message}<br><br>
-      <strong>Is the proxy running?</strong> Open a terminal and run: <code>python nlr_proxy.py</code><br><br>
-      <strong>Other causes:</strong> coordinates outside NSRDB coverage (Americas, Europe, Africa; ±60° lat);
-      NLR servers busy; invalid API key.`);
-    console.error(err);
+    if(!err.cancelled){ setErr(fetchErrorHtml(err)); console.error(err); }
   }finally{btn.disabled=false;}
 }
 
-/* ── Hitting Enter in any input card runs the full simulation (fetching data first if needed) ── */
+/* ── Hitting Enter in any input card, or clicking the Run Simulation button, runs the
+   full simulation (fetching data first if needed) ── */
 const SIM_TRIGGER_FIELD_IDS = ['lat','lon','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed'];
 SIM_TRIGGER_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
@@ -1695,6 +1744,7 @@ SIM_TRIGGER_FIELD_IDS.forEach(id=>{
     if(e.key==='Enter'){ e.preventDefault(); runSimulation(); }
   });
 });
+document.getElementById('btn-run').addEventListener('click', ()=>runSimulation());
 </script>
 </body>
 </html>

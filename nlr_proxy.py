@@ -20,6 +20,7 @@ import urllib.parse
 import urllib.error
 import json
 import sys
+import time
 
 # Windows consoles often default to a cp1252 codepage, which can't encode the
 # box-drawing / checkmark characters this script prints — force UTF-8 output.
@@ -30,6 +31,14 @@ PORT = 8765
 NLR_HOSTS = [
     "developer.nlr.gov",
 ]
+
+# NLR enforces a short burst rate limit on top of its hourly quota, so two
+# calls fired back-to-back (dataset discovery, then the CSV download) can
+# occasionally trip it even when nowhere near the hourly cap. Retry those
+# transient failures here instead of surfacing them to the user.
+MAX_ATTEMPTS = 3
+RETRYABLE_STATUS_CODES = {429, 500, 502, 503, 504}
+RETRY_BACKOFF_SECONDS = [2, 4]  # wait before attempt 2, then before attempt 3
 
 CORS_HEADERS = {
     "Access-Control-Allow-Origin":  "*",
@@ -78,38 +87,45 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         last_error = None
         for host in NLR_HOSTS:
             url = target_url.replace(target_parsed.hostname, host, 1)
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": "NLR-CORS-Proxy/1.0"})
-                with urllib.request.urlopen(req, timeout=60) as resp:
-                    content_type = resp.headers.get("Content-Type", "text/plain")
-                    body = resp.read()
+            for attempt in range(1, MAX_ATTEMPTS + 1):
+                try:
+                    req = urllib.request.Request(url, headers={"User-Agent": "NLR-CORS-Proxy/1.0"})
+                    with urllib.request.urlopen(req, timeout=60) as resp:
+                        content_type = resp.headers.get("Content-Type", "text/plain")
+                        body = resp.read()
 
-                self.send_response(200)
-                self.send_header("Content-Type", content_type)
-                self.send_header("Content-Length", str(len(body)))
-                for k, v in CORS_HEADERS.items():
-                    self.send_header(k, v)
-                self.end_headers()
-                self.wfile.write(body)
-                print(f"  ✓ {len(body):,} bytes from {host}")
-                return
+                    self.send_response(200)
+                    self.send_header("Content-Type", content_type)
+                    self.send_header("Content-Length", str(len(body)))
+                    for k, v in CORS_HEADERS.items():
+                        self.send_header(k, v)
+                    self.end_headers()
+                    self.wfile.write(body)
+                    print(f"  ✓ {len(body):,} bytes from {host}")
+                    return
 
-            except urllib.error.HTTPError as e:
-                body = e.read()
-                # Pass through HTTP errors (e.g. 403 bad API key) with CORS headers
-                self.send_response(e.code)
-                self.send_header("Content-Type", "application/json")
-                for k, v in CORS_HEADERS.items():
-                    self.send_header(k, v)
-                self.end_headers()
-                self.wfile.write(body)
-                print(f"  ✗ HTTP {e.code} from {host}")
-                return
+                except urllib.error.HTTPError as e:
+                    if e.code in RETRYABLE_STATUS_CODES and attempt < MAX_ATTEMPTS:
+                        wait = float(e.headers.get("Retry-After", RETRY_BACKOFF_SECONDS[attempt - 1]))
+                        print(f"  ⏳ HTTP {e.code} from {host} — retrying in {wait:.0f}s (attempt {attempt}/{MAX_ATTEMPTS})")
+                        time.sleep(wait)
+                        continue
 
-            except Exception as e:
-                last_error = str(e)
-                print(f"  ✗ Failed ({host}): {e}")
-                continue
+                    body = e.read()
+                    # Pass through HTTP errors (e.g. 403 bad API key) with CORS headers
+                    self.send_response(e.code)
+                    self.send_header("Content-Type", "application/json")
+                    for k, v in CORS_HEADERS.items():
+                        self.send_header(k, v)
+                    self.end_headers()
+                    self.wfile.write(body)
+                    print(f"  ✗ HTTP {e.code} from {host}")
+                    return
+
+                except Exception as e:
+                    last_error = str(e)
+                    print(f"  ✗ Failed ({host}): {e}")
+                    break
 
         self._send_error(502, f"All NLR hosts failed: {last_error}")
 

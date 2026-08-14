@@ -26,19 +26,36 @@ the proxy is what needs a real HTTP server, not the page itself).
 
 1. **Dataset discovery** — calls NLR's `nsrdb_data_query.json` for the given
    lat/lon, picks the `nsrdb-GOES-aggregated-v4-0-0` dataset (broadest year
-   coverage) and its most recent available year. Don't hardcode a year or
-   endpoint — NREL has retired dataset generations before (PSM3 →
-   GOES-aggregated-v4) and will again.
-2. **Hourly GHI fetch** — downloads one year of hourly GHI as CSV for that
-   dataset/year, through the local proxy.
-3. **Simulation** (`simulate()` in the `<script>`) — walks all 8760(ish) hours,
+   coverage) as the primary source of real years, and separately looks for
+   TMY (Typical Meteorological Year) and TGY (Typical Global Year) data.
+   Those aren't folded into the primary dataset's `availableYears` — NREL
+   publishes each as its own sibling dataset/output (e.g.
+   `nsrdb-GOES-tmy-v4-0-0` next to `nsrdb-GOES-aggregated-v4-0-0`, or
+   `nsrdb-msg-v1-0-0-tmy`/`-tgy` next to `nsrdb-msg-v1-0-0`), each with its
+   own dataset name and interval — `discoverDataset()`'s
+   `findSyntheticYearDataset()` scans every output in the response to find
+   them. Don't hardcode a year or endpoint — NREL has retired dataset
+   generations before (PSM3 → GOES-aggregated-v4) and will again.
+2. **Year picker** — `pickYear()` shows a modal with that list (TGY and TMY
+   first, then real years descending) and waits for the user to choose one
+   before fetching. TMY/TGY have no real calendar year, so each is tracked
+   internally as the literal string `'tmy'`/`'tgy'` rather than a number —
+   `formatYearLabel()` is the one place that turns those into the "TMY"/"TGY"
+   labels shown in the UI/report; everywhere else that branches on year
+   (leap-day calc in `simulate()` and the calendar renderers) calls
+   `isSyntheticYear()` rather than assuming a number. When TMY/TGY is picked,
+   the fetch uses *that* sibling dataset's own name and interval, not the
+   primary dataset's.
+3. **Hourly GHI fetch** — downloads one year (or TMY/TGY) of hourly GHI as
+   CSV for that dataset/year, through the local proxy.
+4. **Simulation** (`simulate()` in the `<script>`) — walks all 8760(ish) hours,
    tracking battery state of charge, and classifies each day as a success or
    a failure based on whether the unmet fraction of that day's total
    (day+night) load exceeds the user-set "acceptable unmet energy" tolerance
    (`unmet-tolerance` input, default 10%). Runs once per PV-size ×
    battery-size combination (the cross product of the two comma-delimited
    size-list inputs).
-4. **Rendering** — a comparison table, two PV×battery matrices (not-met days,
+5. **Rendering** — a comparison table, two PV×battery matrices (not-met days,
    total cost), a cost-vs-reliability scatter plot, and a detail view
    (calendar/monthly/verdict) for whichever config is currently selected.
    Selection state (`activeCfgIdx`) is shared across all of these — clicking
