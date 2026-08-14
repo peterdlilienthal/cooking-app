@@ -257,7 +257,7 @@
         <div style="display:flex;align-items:center;gap:10px;">
           <span class="cmp-hint" id="report-name-display" style="margin:0;"></span>
           <input type="hidden" id="report-name">
-          <button class="csv-btn" id="btn-report" type="button">⬇ Word Report</button>
+          <button class="csv-btn" id="btn-report" type="button">⬇ Download Report</button>
         </div>
       </div>
       <p class="cmp-hint">Downloads a .doc report with your inputs, the Cost vs. Unmet kWh/Year chart, the Day-by-Day Calendar, the highlighted configuration's cost and unmet kWh/year, both the Unmet kWh/Year and Total Cost matrices, and a list of the simulation's assumptions.</p>
@@ -386,6 +386,17 @@ function saveConfig(){
 CONFIG_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', saveConfig);
+});
+
+/* ── Disallow negative numbers in every magnitude-only numeric input (cost/load fields —
+   Lat/Long are excluded since negative is a legitimate hemisphere). Clamps to 0 the moment
+   a negative value is fully typed, rather than only rejecting it on Run. ── */
+const NON_NEGATIVE_INPUT_IDS = ['cost-pv-w','cost-batt-kwh','cost-fixed','day-load','night-load'];
+NON_NEGATIVE_INPUT_IDS.forEach(id=>{
+  const el = document.getElementById(id);
+  if(el) el.addEventListener('input', ()=>{
+    if(el.value !== '' && parseFloat(el.value) < 0) el.value = 0;
+  });
 });
 
 /* ── Keep the visible "current report name" label in sync with the hidden #report-name field ── */
@@ -858,11 +869,11 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
     leap_day:     'true',
     interval:     String(interval),
     utc:          'false',
-    full_name:    'Solar+Simulator+User',
+    full_name:    'Solar Simulator User',
     email:        email,
     affiliation:  'Personal',
     mailing_list: 'false',
-    reason:       'Off-grid+solar+simulation',
+    reason:       'Off-grid solar simulation',
     api_key:      API_KEY,
     attributes:   'ghi'
   });
@@ -1002,7 +1013,7 @@ function showUnmetKwhHistogram(run){
   });
 
   document.getElementById('histogram-title').textContent = `🔻 Daily Unmet Energy — ${run.pv} W / ${run.batt} Wh`;
-  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily unmet energy in kWh; height is the number of days that fell in that range.';
+  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily unmet energy in kWh; height is the number of days that fell in that range. Label is the lower bound of the bin. Days with zero unmet energy are ignored.';
   document.getElementById('histogram-chart').innerHTML = svg;
   document.getElementById('histogram-modal').style.display = 'flex';
 }
@@ -1100,17 +1111,15 @@ function renderFrontierTable(){
 
 /* ── Render: comparison table across all 4 configs ── */
 function renderComparison(){
-  const best = allRuns.reduce((a,b)=> computeTotalUnmetKwh(b)<computeTotalUnmetKwh(a) ? b : a);
   const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(run=>run.cost));
   const tbl = document.getElementById('cmp-tbl');
   tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const soc = computeSocExtremeDays(run);
-      const star = run===best ? ' ★' : '';
       const rowCls = (i===activeCfgIdx ? ' active-row' : '') + (isFrontier[i] ? ' frontier-row' : '');
       return `<tr data-idx="${i}" class="${rowCls}">
         <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
-        <td style="font-family:'Space Mono',monospace">${run.pv} W${star}</td>
+        <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(computeTotalUnmetKwh(run))}</td>
         <td>${soc.atMin}</td>
@@ -1153,7 +1162,7 @@ function renderCostMatrix(){
   const minC = Math.min(...costs), maxC = Math.max(...costs);
   const fmt = c => '$'+Math.round(c).toLocaleString();
 
-  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr><th>Battery (rows) / PV (columns)</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   for(const batt of battSizes){
     html += `<tr><th>${batt} Wh</th>`;
     for(const pv of pvSizes){
@@ -1192,7 +1201,7 @@ function renderUnmetKwhMatrix(){
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const minU = Math.min(...unmetKwhByIdx), maxU = Math.max(...unmetKwhByIdx);
 
-  let html = `<thead><tr><th>Battery ＼ PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  let html = `<thead><tr><th>Battery (rows) / PV (columns)</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   for(const batt of battSizes){
     html += `<tr><th>${batt} Wh</th>`;
     for(const pv of pvSizes){
@@ -1482,7 +1491,7 @@ function downloadWordReport(){
   const cellxStr = cellxs.map(x=>`\\cellx${x}`).join('');
 
   const buildMatrixRows = cellText => {
-    let out = `\\trowd\\trkeep\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b Batt \\emdash  PV\\b0\\cell`;
+    let out = `\\trowd\\trkeep\\trgaph60\\trleft0${cellxStr}\n\\pard\\intbl\\qc\\b ${esc('Battery (rows) / PV (columns)')}\\b0\\cell`;
     pvSizes.forEach(pv => out += `\\pard\\intbl\\qc\\b ${pv}W\\b0\\cell`);
     out += `\\row\n`;
     battSizes.forEach(batt=>{
@@ -1543,6 +1552,7 @@ ${rows}
 \\pard\\par
 \\pard\\keepn\\qc\\fs22\\b Cost vs. Unmet kWh/Year\\b0\\fs20\\par
 \\pard\\keep\\qc{\\pict\\pngblip\\picw${scatterCanvas.width}\\pich${scatterCanvas.height}\\picwgoal${scatterPicWgoal}\\pichgoal${scatterPicHgoal} ${scatterPngHex}}\\par
+\\pard\\qc\\fs16 ${esc("Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh")}\\fs20\\par
 \\pard\\keepn\\qc\\fs22\\b Day-by-Day Calendar\\b0\\fs20\\par
 \\pard\\keep\\qc{\\pict\\pngblip\\picw${calendarCanvas.width}\\pich${calendarCanvas.height}\\picwgoal${calendarPicWgoal}\\pichgoal${calendarPicHgoal} ${calendarPngHex}}\\par
 \\pard\\par
@@ -1563,7 +1573,7 @@ ${assumptionRows}
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${safeFileName}.doc`;
+  a.download = `${safeFileName}.rtf`;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
@@ -1669,6 +1679,8 @@ async function performSimulation({scroll=true}={}){
   const costBattKwh=parseFloat(document.getElementById('cost-batt-kwh').value);
   const costFixed=parseFloat(document.getElementById('cost-fixed').value);
   if(isNaN(lat)||isNaN(lon)||isNaN(dayWh)||isNaN(nightWh)){setErr('Please fill in all numeric fields.');return;}
+  if(dayWh<0){setErr('Daytime energy need must be a non-negative number.');return;}
+  if(nightWh<0){setErr('Night-time energy need must be a non-negative number.');return;}
   if(dayWh+nightWh<=0){setErr('Total daily load must be > 0 Wh.');return;}
   if(isNaN(costPvW)||costPvW<0){setErr('$ per watt (PV) must be a non-negative number.');return;}
   if(isNaN(costBattKwh)||costBattKwh<0){setErr('$ per kWh (battery) must be a non-negative number.');return;}
