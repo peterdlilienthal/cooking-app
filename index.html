@@ -63,7 +63,7 @@
 
   .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);}
 
-  .cal-wrap{overflow-x:auto;}
+  .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;user-select:none;}
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
   .cal-hdr{font-size:10px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
   .cal-row-lbl{font-size:11px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
@@ -93,7 +93,7 @@
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
   .assumptions-list{list-style:disc;padding-left:20px;font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;}
-  .matrix-tbl{table-layout:fixed;min-width:100%;}
+  .matrix-tbl{width:auto;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
   .matrix-cell{cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;}
