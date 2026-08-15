@@ -32,14 +32,16 @@ The repo is served via GitHub Pages (Settings → Pages → Deploy from branch
 step or Actions workflow involved.
 
 GitHub Pages is static-only, so it can't run `nlr_proxy.py`. `nlr_proxy_worker.js`
-+ `wrangler.toml` are a Cloudflare Worker port of the same proxy, meant to be
-deployed with `npx wrangler deploy` at a static address and give a public HTTPS
-proxy URL. `index.html`'s `PROXY_BASE_URL` const is hardcoded to that address
-(same pattern as `API_KEY`) — no runtime configuration UI, since the proxy's
-location doesn't vary per visitor. As of this writing that worker **has not
-been deployed yet**, and `PROXY_BASE_URL` is still a placeholder
-(`nlr-nsrdb-proxy.example.workers.dev`) — update it to the real deployed URL
-once `wrangler deploy` prints one.
++ `wrangler.toml` are a Cloudflare Worker port of the same proxy, deployed at
+a static address: `https://nlr-nsrdb-proxy.plilient.workers.dev`. `index.html`'s
+`PROXY_BASE_URL` const is hardcoded to that address (same pattern as
+`API_KEY`) — no runtime configuration UI, since the proxy's location doesn't
+vary per visitor. `.github/workflows/deploy-worker.yml` redeploys the worker
+via `wrangler` whenever `nlr_proxy_worker.js` or `wrangler.toml` change on
+`master` (needs the `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo
+secrets, already configured). The `workers.dev` subdomain is fixed per
+Cloudflare account, so `PROXY_BASE_URL` only needs updating if the worker is
+ever renamed or moved to a custom domain.
 
 ## Architecture / data flow
 
