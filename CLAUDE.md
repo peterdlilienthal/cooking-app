@@ -7,20 +7,38 @@ size combinations side by side (reliability and cost).
 
 ## Files
 
-- **`solar_sim_nrel.html`** — the entire app: UI, NSRDB fetch logic, the
-  hour-by-hour simulation, and all rendering. Single file, no build step, no
-  external JS dependencies (only a Google Fonts CSS import).
+- **`index.html`** — the entire app: UI, NSRDB fetch logic, the hour-by-hour
+  simulation, and all rendering. Single file, no build step, no external JS
+  dependencies (only a Google Fonts CSS import). Named `index.html` (not
+  `solar_sim_nrel.html`) so GitHub Pages serves it at the site root.
 - **`nlr_proxy.py`** — a stdlib-only local CORS proxy (`http://localhost:8765`)
   that forwards browser requests to NREL's API. Required because NREL doesn't
-  send CORS headers, so the page can't call it directly.
+  send CORS headers, so the page can't call it directly. Used for local dev
+  (`file://`); the hosted GitHub Pages copy needs a public proxy instead — see
+  Hosting below.
 
-## Running it
+## Running it locally
 
 ```bash
 python nlr_proxy.py          # start the proxy (leave running)
 ```
-Then open `solar_sim_nrel.html` directly in a browser (`file://` works fine —
-the proxy is what needs a real HTTP server, not the page itself).
+Then open `index.html` directly in a browser (`file://` works fine — the
+proxy is what needs a real HTTP server, not the page itself).
+
+## Hosting (GitHub Pages)
+
+The repo is served via GitHub Pages (Settings → Pages → Deploy from branch
+`master` / root) — every push to `master` redeploys automatically, no build
+step or Actions workflow involved.
+
+GitHub Pages is static-only, so it can't run `nlr_proxy.py`. `nlr_proxy_worker.js`
++ `wrangler.toml` are a Cloudflare Worker port of the same proxy, meant to be
+deployed with `npx wrangler deploy` and give a public HTTPS proxy URL. As of
+this writing that worker **has not been deployed yet**, and `index.html`'s
+`PROXY_BASE_URL` still points at `localhost:8765` unconditionally — so the
+hosted copy can't fetch NREL data until the worker is deployed and the page
+is updated to use it (e.g. by switching on `location.hostname`, using the
+worker when not running from `localhost`/`file:`).
 
 ## Architecture / data flow
 
@@ -88,8 +106,9 @@ trusting the numbers for a real installation:
 - **Windows console encoding**: `nlr_proxy.py` forces UTF-8 stdout/stderr —
   without it, the proxy crashes on startup printing its banner (cp1252 can't
   encode the box-drawing characters).
-- The NLR API key is hardcoded in `solar_sim_nrel.html` (`API_KEY` const). Not
-  a secret in the traditional sense, but don't casually publish this repo
-  publicly without swapping it out.
+- The NLR API key is hardcoded in `index.html` (`API_KEY` const). Not a secret
+  in the traditional sense, but the repo (and now the hosted page) is public,
+  so anyone can see and use it — keep an eye on rate-limit/quota errors from
+  drive-by traffic once Pages hosting is live.
 - `.claude/settings.local.json` is gitignored — it's Claude Code's local
   permission cache, not app config.
