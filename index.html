@@ -1087,16 +1087,16 @@ function renderFrontierTable(){
     .sort((a,b)=> b.run.cost-a.run.cost);
 
   const tbl = document.getElementById('frontier-tbl');
-  tbl.innerHTML = `<thead><tr><th>PV</th><th>Battery</th><th>Cost</th><th>Unmet kWh/yr</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
     rows.map((e,k)=>{
       const {run,i,unmetKwh} = e;
       const next = rows[k+1];
       const marginal = next ? (run.cost-next.run.cost)/(next.unmetKwh-unmetKwh) : null;
       const activeCls = i===activeCfgIdx ? ' active-row' : '';
       return `<tr data-idx="${i}" class="${activeCls}">
+        <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
-        <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
         <td style="font-family:'Space Mono',monospace">${marginal===null ? '—' : '$'+marginal.toFixed(2)}</td>
       </tr>`;
