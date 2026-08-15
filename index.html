@@ -121,15 +121,6 @@
 <div class="app">
 
   <div class="card">
-    <div class="card-title">🔌 Proxy Server</div>
-    <div class="field">
-      <label>Proxy URL</label>
-      <input type="text" id="proxy-url" placeholder="https://nlr-nsrdb-proxy.&lt;subdomain&gt;.workers.dev">
-      <span class="hint">Where NSRDB requests are forwarded through — your deployed Cloudflare Worker (nlr_proxy_worker.js), or http://localhost:8765 if running nlr_proxy.py locally. Saved in this browser.</span>
-    </div>
-  </div>
-
-  <div class="card">
     <div class="card-title">📍 Location</div>
     <div class="fields">
       <div class="field">
@@ -357,13 +348,10 @@
 <script>
 const API_KEY = 'miJdkoFdKvj0XLnEyfSa9bcnHpRBv81IcDLCph6M';
 const NLR_EMAIL = 'plilient@gmail.com';
-/* ── The page is static (GitHub Pages), so the proxy's location can't be baked in at deploy
-   time — it's whatever the user typed into #proxy-url, persisted via the same localStorage
-   mechanism as the other inputs (see CONFIG_FIELD_IDS below). ── */
-function getProxyBaseUrl(){
-  const el = document.getElementById('proxy-url');
-  return (el && el.value || '').trim().replace(/\/+$/, '');
-}
+// The nlr_proxy_worker.js Cloudflare Worker's static address. Update this after
+// deploying (`npx wrangler deploy`) — or point it at http://localhost:8765 to use
+// nlr_proxy.py for local dev instead.
+const PROXY_BASE_URL = 'https://nlr-nsrdb-proxy.example.workers.dev';
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
@@ -381,7 +369,7 @@ let nlrFetch = null;     // {lat,lon,promise} for a fetch currently in flight, s
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
-const CONFIG_FIELD_IDS = ['proxy-url','lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
 (function restoreSavedConfig(){
   let saved;
   try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
@@ -715,16 +703,11 @@ document.getElementById('load-change-modal-recommend').addEventListener('click',
 const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
 
-function proxyNotConfiguredError(){
-  const e = new Error('No proxy server configured. Enter its URL under "Proxy Server" above.');
-  e.proxyDown = true;
-  return e;
-}
-function proxyDownError(base){
-  const msg = base.includes('localhost')
-    ? `Could not reach ${base}. Make sure nlr_proxy.py is running:\n\n    python nlr_proxy.py`
-    : `Could not reach the proxy at ${base}. Check that it's deployed and the URL under "Proxy Server" is correct.`;
-  const e = new Error(msg);
+const PROXY_DOWN_MSG = PROXY_BASE_URL.includes('localhost')
+  ? 'Could not reach the local proxy. Make sure nlr_proxy.py is running:\n\n    python nlr_proxy.py'
+  : `Could not reach the proxy at ${PROXY_BASE_URL}.`;
+function proxyDownError(){
+  const e = new Error(PROXY_DOWN_MSG);
   e.proxyDown = true;
   return e;
 }
@@ -748,16 +731,14 @@ async function discoverDataset(lat, lon) {
     api_key: API_KEY
   });
   const nlrUrl = `https://developer.nlr.gov/api/solar/nsrdb_data_query.json?${params}`;
-  const proxyBase = getProxyBaseUrl();
-  if (!proxyBase) throw proxyNotConfiguredError();
-  const proxyUrl = `${proxyBase}/proxy?url=${encodeURIComponent(nlrUrl)}`;
+  const proxyUrl = `${PROXY_BASE_URL}/proxy?url=${encodeURIComponent(nlrUrl)}`;
 
   let resp, json;
   try {
     resp = await fetch(proxyUrl);
     json = await resp.json();
   } catch(e) {
-    throw proxyDownError(proxyBase);
+    throw proxyDownError();
   }
   if (json.errors && json.errors.length) throw new Error(json.errors.join(', '));
 
@@ -905,16 +886,14 @@ async function fetchNLR(lat, lon, email, datasetName, year, interval) {
 
   // Build the NLR target URL, then wrap it through the configured CORS proxy
   const nlrUrl = `https://developer.nlr.gov/api/nsrdb/v2/solar/${datasetName}-download.csv?${params}`;
-  const proxyBase = getProxyBaseUrl();
-  if (!proxyBase) throw proxyNotConfiguredError();
-  const proxyUrl = `${proxyBase}/proxy?url=${encodeURIComponent(nlrUrl)}`;
+  const proxyUrl = `${PROXY_BASE_URL}/proxy?url=${encodeURIComponent(nlrUrl)}`;
 
   let resp, text;
   try {
     resp = await fetch(proxyUrl);
     text = await resp.text();
   } catch(e) {
-    throw proxyDownError(proxyBase);
+    throw proxyDownError();
   }
 
   if(!resp.ok && !text.trim().startsWith('{'))

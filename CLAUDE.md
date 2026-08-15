@@ -33,12 +33,13 @@ step or Actions workflow involved.
 
 GitHub Pages is static-only, so it can't run `nlr_proxy.py`. `nlr_proxy_worker.js`
 + `wrangler.toml` are a Cloudflare Worker port of the same proxy, meant to be
-deployed with `npx wrangler deploy` and give a public HTTPS proxy URL. As of
-this writing that worker **has not been deployed yet**, and `index.html`'s
-`PROXY_BASE_URL` still points at `localhost:8765` unconditionally — so the
-hosted copy can't fetch NREL data until the worker is deployed and the page
-is updated to use it (e.g. by switching on `location.hostname`, using the
-worker when not running from `localhost`/`file:`).
+deployed with `npx wrangler deploy` at a static address and give a public HTTPS
+proxy URL. `index.html`'s `PROXY_BASE_URL` const is hardcoded to that address
+(same pattern as `API_KEY`) — no runtime configuration UI, since the proxy's
+location doesn't vary per visitor. As of this writing that worker **has not
+been deployed yet**, and `PROXY_BASE_URL` is still a placeholder
+(`nlr-nsrdb-proxy.example.workers.dev`) — update it to the real deployed URL
+once `wrangler deploy` prints one.
 
 ## Architecture / data flow
 
