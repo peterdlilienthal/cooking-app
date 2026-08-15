@@ -58,7 +58,7 @@
   #status{display:none;position:sticky;top:0;z-index:20;text-align:center;padding:16px;font-size:15px;font-weight:600;color:var(--white);background:var(--night);border-bottom:2px solid var(--sun);box-shadow:0 6px 18px rgba(0,0,0,.35);}
   .spinner{display:inline-block;width:16px;height:16px;border:2.5px solid rgba(245,166,35,.3);border-top-color:var(--sun);border-radius:50%;animation:spin .7s linear infinite;margin-right:8px;vertical-align:middle;}
   @keyframes spin{to{transform:rotate(360deg);}}
-  #error-msg{display:none;background:rgba(192,57,43,.15);border:1px solid rgba(192,57,43,.4);border-radius:10px;padding:13px 16px;font-size:15px;color:#E74C3C;margin-top:10px;line-height:1.6;}
+  #error-msg{display:none;position:sticky;top:0;z-index:20;background:rgba(192,57,43,.15);backdrop-filter:blur(6px);border:1px solid rgba(192,57,43,.4);border-bottom:2px solid #E74C3C;padding:13px 16px;font-size:15px;color:#E74C3C;margin-bottom:10px;line-height:1.6;box-shadow:0 6px 18px rgba(0,0,0,.35);}
   #results{display:none;}
 
   .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);}
