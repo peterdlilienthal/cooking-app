@@ -8,7 +8,7 @@
   @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
   :root {
     --sun:#F5A623; --night:#0D1B2A; --dusk:#1E3A5F;
-    --good:#27AE60; --yellow:#F1C40F; --warn:#E67E22; --bad:#C0392B; --white:#FFFFFF;
+    --good:#27AE60; --lgood:#8BC34A; --yellow:#F1C40F; --warn:#E67E22; --bad:#C0392B; --white:#FFFFFF;
     --muted:#8A94A3;
   }
   *{box-sizing:border-box;margin:0;padding:0;}
@@ -69,6 +69,7 @@
   .cal-row-lbl{font-size:11px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
   .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);cursor:pointer;}
   .cal-cell.green{background:var(--good);opacity:.82;}
+  .cal-cell.lightgreen{background:var(--lgood);opacity:.82;}
   .cal-cell.yellow{background:var(--yellow);opacity:.82;}
   .cal-cell.orange{background:var(--warn);opacity:.82;}
   .cal-cell.red{background:var(--bad);opacity:.82;}
@@ -76,7 +77,8 @@
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
   .cal-legend span{font-size:13px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
-  .leg-green::before{background:var(--good);} .leg-yellow::before{background:var(--yellow);}
+  .leg-green::before{background:var(--good);} .leg-lightgreen::before{background:var(--lgood);}
+  .leg-yellow::before{background:var(--yellow);}
   .leg-orange::before{background:var(--warn);} .leg-red::before{background:var(--bad);}
 
   .mtbl{width:100%;border-collapse:collapse;font-size:15px;}
@@ -94,6 +96,9 @@
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
   .assumptions-list{list-style:disc;padding-left:20px;font-size:14px;color:rgba(255,255,255,.75);line-height:1.7;}
+  .metric-select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:6px 10px;color:var(--white);font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;text-transform:none;letter-spacing:normal;outline:none;cursor:pointer;}
+  .metric-select:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
+  .metric-select option{background:#1E3A5F;}
   .matrix-tbl{width:auto;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
@@ -239,20 +244,23 @@
       <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
       <div class="cal-legend">
         <span class="leg-green">0% unmet</span>
-        <span class="leg-yellow">&lt;25% unmet</span>
+        <span class="leg-lightgreen">&lt;5% unmet</span>
+        <span class="leg-yellow">5–25% unmet</span>
         <span class="leg-orange">25–50% unmet</span>
         <span class="leg-red">&gt;50% unmet</span>
       </div>
     </div>
     <div class="card">
-      <div class="card-title">🔻 Unmet kWh/Year Matrix (PV × Battery)</div>
-      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="unmet-kwh-matrix"></table></div>
-      <p class="cmp-hint">Unmet load per year. Click a cell to highlight the same configuration in the tables above and below.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
-      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
-      <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span>🔢 Matrix (PV × Battery)</span>
+        <select id="matrix-metric" class="metric-select">
+          <option value="cost">Total Cost</option>
+          <option value="unmet-kwh">Unmet kWh/yr</option>
+          <option value="unmet-pct">Unmet %</option>
+        </select>
+      </div>
+      <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="combo-matrix"></table></div>
+      <p class="cmp-hint" id="combo-matrix-hint"></p>
     </div>
     <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -1091,6 +1099,11 @@ function formatUnmetKwh(v){
   return v<0.1 ? v.toFixed(2) : v.toFixed(1);
 }
 
+/* ── Format unmet %/year: same adaptive-decimal rule as formatUnmetKwh ── */
+function formatUnmetPct(v){
+  return (v<0.1 ? v.toFixed(2) : v.toFixed(1))+'%';
+}
+
 /* ── Measure rendered text width (via an offscreen canvas) so chart margins can grow to
    fit whatever digits the data happens to produce, instead of a fixed guess that large
    dollar figures can overflow into neighboring labels. ── */
@@ -1120,7 +1133,7 @@ function renderFrontierTable(){
     .sort((a,b)=> b.run.cost-a.run.cost);
 
   const tbl = document.getElementById('frontier-tbl');
-  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Unmet %</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
     rows.map((e,k)=>{
       const {run,i,unmetKwh} = e;
       const next = rows[k+1];
@@ -1131,6 +1144,7 @@ function renderFrontierTable(){
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatUnmetPct(unmetKwh/computeAnnualLoadKwh(run)*100)}</td>
         <td style="font-family:'Space Mono',monospace">${marginal===null ? '—' : '$'+marginal.toFixed(2)}</td>
       </tr>`;
     }).join('') + '</tbody>';
@@ -1140,8 +1154,7 @@ function renderFrontierTable(){
       activeCfgIdx = +row.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderCostMatrix();
-      renderUnmetKwhMatrix();
+      renderMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -1152,15 +1165,17 @@ function renderFrontierTable(){
 function renderComparison(){
   const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(run=>run.cost));
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Unmet %</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const soc = computeSocExtremeDays(run);
+      const unmetKwh = computeTotalUnmetKwh(run);
       const rowCls = (i===activeCfgIdx ? ' active-row' : '') + (isFrontier[i] ? ' frontier-row' : '');
       return `<tr data-idx="${i}" class="${rowCls}">
         <td style="font-family:'Space Mono',monospace">$${Math.round(run.cost).toLocaleString()}</td>
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
-        <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(computeTotalUnmetKwh(run))}</td>
+        <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatUnmetPct(unmetKwh/computeAnnualLoadKwh(run)*100)}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
         <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
@@ -1172,8 +1187,7 @@ function renderComparison(){
       activeCfgIdx = +row.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderCostMatrix();
-      renderUnmetKwhMatrix();
+      renderMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -1192,13 +1206,34 @@ function renderComparison(){
   });
 }
 
-/* ── Render: total cost matrix, PV size (columns) × battery size (rows) ── */
-function renderCostMatrix(){
+/* ── Matrix metrics selectable via the #matrix-metric dropdown ── */
+const MATRIX_METRICS = {
+  cost: {
+    value: run => run.cost,
+    label: c => '$'+Math.round(c).toLocaleString(),
+    hint: 'Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.'
+  },
+  'unmet-kwh': {
+    value: run => computeTotalUnmetKwh(run),
+    label: v => formatUnmetKwh(v)+' kWh',
+    hint: 'Unmet load per year. Click a cell to highlight the same configuration in the tables above and below.'
+  },
+  'unmet-pct': {
+    value: run => computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100,
+    label: formatUnmetPct,
+    hint: "Unmet load per year as a percentage of that config's total annual load. Click a cell to highlight the same configuration in the tables above and below."
+  }
+};
+
+/* ── Render: PV × battery matrix, showing whichever metric is selected in #matrix-metric ── */
+function renderMatrix(){
+  const metric = MATRIX_METRICS[document.getElementById('matrix-metric').value];
+  document.getElementById('combo-matrix-hint').textContent = metric.hint;
+
   const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
   const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
   const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
   const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(r=>r.cost));
-  const fmt = c => '$'+Math.round(c).toLocaleString();
 
   let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   battSizes.forEach((batt,ri)=>{
@@ -1211,66 +1246,26 @@ function renderCostMatrix(){
       const run = allRuns[idx];
       const cls = isFrontier[idx] ? 'cg' : 'cn';
       const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
-      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${fmt(run.cost)}</span></td>`;
+      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${metric.label(metric.value(run))}</span></td>`;
     }
     html += '</tr>';
   });
   html += '</tbody>';
 
-  const tbl = document.getElementById('cost-matrix');
+  const tbl = document.getElementById('combo-matrix');
   tbl.innerHTML = html;
   tbl.querySelectorAll('.matrix-cell').forEach(td=>{
     td.addEventListener('click', ()=>{
       activeCfgIdx = +td.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderCostMatrix();
-      renderUnmetKwhMatrix();
+      renderMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
   });
 }
-
-/* ── Render: unmet kWh/year matrix, PV size (columns) × battery size (rows) ── */
-function renderUnmetKwhMatrix(){
-  const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
-  const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
-  const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
-  const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
-  const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(r=>r.cost));
-
-  let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
-  battSizes.forEach((batt,ri)=>{
-    html += '<tr>';
-    if(ri===0) html += `<th class="mtx-batt-label" rowspan="${battSizes.length}">Battery</th>`;
-    html += `<th>${batt} Wh</th>`;
-    for(const pv of pvSizes){
-      const idx = idxByKey.get(`${pv}|${batt}`);
-      if(idx===undefined){ html += '<td>—</td>'; continue; }
-      const unmetKwh = unmetKwhByIdx[idx];
-      const cls = isFrontier[idx] ? 'cg' : 'cn';
-      const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
-      html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${formatUnmetKwh(unmetKwh)}</span></td>`;
-    }
-    html += '</tr>';
-  });
-  html += '</tbody>';
-
-  const tbl = document.getElementById('unmet-kwh-matrix');
-  tbl.innerHTML = html;
-  tbl.querySelectorAll('.matrix-cell').forEach(td=>{
-    td.addEventListener('click', ()=>{
-      activeCfgIdx = +td.dataset.idx;
-      renderFrontierTable();
-      renderComparison();
-      renderCostMatrix();
-      renderUnmetKwhMatrix();
-      renderUnmetKwhScatter();
-      renderCalendar();
-    });
-  });
-}
+document.getElementById('matrix-metric').addEventListener('change', renderMatrix);
 
 /* ── Render: cost vs. unmet-kWh/year scatter plot ── */
 function renderUnmetKwhScatter(){
@@ -1338,8 +1333,7 @@ function renderUnmetKwhScatter(){
       activeCfgIdx = +dot.dataset.idx;
       renderFrontierTable();
       renderComparison();
-      renderCostMatrix();
-      renderUnmetKwhMatrix();
+      renderMatrix();
       renderUnmetKwhScatter();
       renderCalendar();
     });
@@ -1369,7 +1363,7 @@ function renderCalendar(){
         const r = results[ri++];
         const unmetPct = (1-r.frac)*100;
         const unmetKwh = (1-r.frac)*dailyTotalWh/1000;
-        const lvl = unmetPct<=1e-9 ? 'green' : unmetPct<25 ? 'yellow' : unmetPct<=50 ? 'orange' : 'red';
+        const lvl = unmetPct<=1e-9 ? 'green' : unmetPct<5 ? 'lightgreen' : unmetPct<25 ? 'yellow' : unmetPct<=50 ? 'orange' : 'red';
         const dateLabel = `${MONTHS[m]} ${d+1}`;
         const cell = mkDiv('cal-cell '+lvl, '', `${dateLabel}: ${unmetKwh.toFixed(2)} kWh unmet (${unmetPct.toFixed(2)}%)`);
         cell.addEventListener('click', ()=> showDayDetail(dateLabel, unmetKwh, unmetPct));
@@ -1470,7 +1464,7 @@ function buildReportCalendarCanvas(run){
   ctx.font='9px Arial'; ctx.fillStyle='#666666'; ctx.textAlign='center';
   for(let d=1; d<=31; d++) ctx.fillText(String(d), gx+(d-0.5)*cell, gy-6);
 
-  const colorFor = unmetPct => unmetPct<=1e-9 ? '#27AE60' : unmetPct<25 ? '#F1C40F' : unmetPct<=50 ? '#E67E22' : '#C0392B';
+  const colorFor = unmetPct => unmetPct<=1e-9 ? '#27AE60' : unmetPct<5 ? '#8BC34A' : unmetPct<25 ? '#F1C40F' : unmetPct<=50 ? '#E67E22' : '#C0392B';
 
   let ri=0;
   for(let m=0;m<12;m++){
@@ -1795,8 +1789,7 @@ async function performSimulation({scroll=true}={}){
     document.getElementById('results').style.display='block';
     renderFrontierTable();
     renderComparison();
-    renderCostMatrix();
-    renderUnmetKwhMatrix();
+    renderMatrix();
     renderUnmetKwhScatter();
     renderCalendar();
     if(scroll) document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
