@@ -96,6 +96,8 @@
   .matrix-tbl{width:auto;}
   .matrix-tbl th,.matrix-tbl td{text-align:center;white-space:nowrap;}
   .matrix-tbl thead th:first-child,.matrix-tbl tbody th{text-align:left;}
+  .matrix-tbl thead th.mtx-pv-label{text-align:right;padding-left:4px;}
+  .matrix-tbl tbody th.mtx-batt-label{text-align:center;writing-mode:vertical-rl;transform:rotate(180deg);vertical-align:middle;padding:7px 2px;}
   .matrix-cell{cursor:pointer;font-family:'Space Mono',monospace;font-weight:700;}
   .matrix-cell:hover{background:rgba(255,255,255,.03);}
   .matrix-cell.active-cell{background:rgba(245,166,35,.1);}
@@ -227,6 +229,11 @@
       <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card">
+      <div class="card-title">🏆 Cost Frontier</div>
+      <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
+      <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to highlight the same configuration in the tables below.</p>
+    </div>
+    <div class="card">
       <div class="card-title">📅 Day-by-Day Calendar — <span id="cal-label"></span></div>
       <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
       <div class="cal-legend">
@@ -245,11 +252,6 @@
       <div class="card-title">💲 Total Cost Matrix (PV × Battery)</div>
       <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="cost-matrix"></table></div>
       <p class="cmp-hint">Total system cost (PV + battery + fixed). Click a cell to highlight the same configuration in the tables above and below.</p>
-    </div>
-    <div class="card">
-      <div class="card-title">🏆 Cost Frontier</div>
-      <div style="overflow-x:auto"><table class="mtbl" id="frontier-tbl"></table></div>
-      <p class="cmp-hint">Configs where no other config is both cheaper and lower in unmet kWh, ordered most- to least-reliable. Marginal $/kWh is the extra cost per kWh of unmet energy avoided versus the next-cheaper frontier config; the cheapest config has none. Click a row to highlight the same configuration in the tables below.</p>
     </div>
     <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -1068,6 +1070,16 @@ function formatUnmetKwh(v){
   return v<0.1 ? v.toFixed(2) : v.toFixed(1);
 }
 
+/* ── Measure rendered text width (via an offscreen canvas) so chart margins can grow to
+   fit whatever digits the data happens to produce, instead of a fixed guess that large
+   dollar figures can overflow into neighboring labels. ── */
+let _measureCtx = null;
+function measureTextWidth(text, font){
+  if(!_measureCtx) _measureCtx = document.createElement('canvas').getContext('2d');
+  _measureCtx.font = font;
+  return _measureCtx.measureText(text).width;
+}
+
 /* ── Which configs are on the cost/x-metric frontier — no other config is at least as
    good on both cost and x, and strictly better on at least one. Ties resolve in favor
    of the lower-x config (a tied cost with higher x is dominated). ── */
@@ -1168,9 +1180,11 @@ function renderCostMatrix(){
   const minC = Math.min(...costs), maxC = Math.max(...costs);
   const fmt = c => '$'+Math.round(c).toLocaleString();
 
-  let html = `<thead><tr><th>Battery (rows) / PV (columns)</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
-  for(const batt of battSizes){
-    html += `<tr><th>${batt} Wh</th>`;
+  let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  battSizes.forEach((batt,ri)=>{
+    html += '<tr>';
+    if(ri===0) html += `<th class="mtx-batt-label" rowspan="${battSizes.length}">Battery</th>`;
+    html += `<th>${batt} Wh</th>`;
     for(const pv of pvSizes){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
@@ -1181,7 +1195,7 @@ function renderCostMatrix(){
       html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${fmt(run.cost)}</span></td>`;
     }
     html += '</tr>';
-  }
+  });
   html += '</tbody>';
 
   const tbl = document.getElementById('cost-matrix');
@@ -1207,9 +1221,11 @@ function renderUnmetKwhMatrix(){
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const minU = Math.min(...unmetKwhByIdx), maxU = Math.max(...unmetKwhByIdx);
 
-  let html = `<thead><tr><th>Battery (rows) / PV (columns)</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
-  for(const batt of battSizes){
-    html += `<tr><th>${batt} Wh</th>`;
+  let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
+  battSizes.forEach((batt,ri)=>{
+    html += '<tr>';
+    if(ri===0) html += `<th class="mtx-batt-label" rowspan="${battSizes.length}">Battery</th>`;
+    html += `<th>${batt} Wh</th>`;
     for(const pv of pvSizes){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
@@ -1220,7 +1236,7 @@ function renderUnmetKwhMatrix(){
       html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${formatUnmetKwh(unmetKwh)}</span></td>`;
     }
     html += '</tr>';
-  }
+  });
   html += '</tbody>';
 
   const tbl = document.getElementById('unmet-kwh-matrix');
@@ -1240,8 +1256,8 @@ function renderUnmetKwhMatrix(){
 
 /* ── Render: cost vs. unmet-kWh/year scatter plot ── */
 function renderUnmetKwhScatter(){
-  const W=640, H=396, M={l:64,r:20,t:20,b:66};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+  const W=640, H=396;
+  const M={l:64,r:20,t:20,b:66};
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
@@ -1256,11 +1272,18 @@ function renderUnmetKwhScatter(){
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
   const yHi = Math.ceil(yMaxRaw+yPad);
 
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  const yTickLabels = yTicks.map(t=>`$${t.toLocaleString()}`);
+  const yLabelW = Math.max(...yTickLabels.map(s=>measureTextWidth(s, "12px 'Space Mono', monospace")));
+  // Left margin grows to fit the widest $ tick label, with enough left over that the
+  // rotated "Total cost ($)" axis title (sitting at x=16) never collides with it.
+  M.l = Math.max(64, Math.ceil(yLabelW) + 44);
+
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
   const xScale = v => M.l + (v/xMax)*plotW;
   const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
 
   const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(xMax*i/5);
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
 
   let svg = '';
   xTicks.forEach(t=>{
@@ -1335,8 +1358,8 @@ function renderCalendar(){
 
 /* ── Report: light-theme redraw of the Cost vs. Unmet kWh/Year scatter onto a canvas (for the Word export) ── */
 function buildReportUnmetKwhScatterCanvas(){
-  const W=900, H=476, M={l:80,r:30,t:30,b:76};
-  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
+  const W=900, H=476;
+  const M={l:80,r:30,t:30,b:76};
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
@@ -1350,6 +1373,14 @@ function buildReportUnmetKwhScatterCanvas(){
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
   const yHi = Math.ceil(yMaxRaw+yPad);
+
+  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
+  const yLabelW = Math.max(...yTicks.map(t=>measureTextWidth(`$${t.toLocaleString()}`, '12px Arial')));
+  // Left margin grows to fit the widest $ tick label, with enough left over that the
+  // rotated "Total cost ($)" axis title (translated to x=20) never collides with it.
+  M.l = Math.max(80, Math.ceil(yLabelW) + 54);
+
+  const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
   const xScale = v => M.l + (v/xMax)*plotW;
   const yScale = v => M.t + plotH - ((v-yLo)/((yHi-yLo)||1))*plotH;
 
@@ -1367,7 +1398,6 @@ function buildReportUnmetKwhScatterCanvas(){
     ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t.toFixed(1), x, M.t+plotH+20);
     ctx.fillStyle='#999999'; ctx.fillText(pct.toFixed(2)+'%', x, M.t+plotH+35);
   });
-  const yTicks=[]; for(let i=0;i<=5;i++) yTicks.push(Math.round(yLo+(yHi-yLo)*i/5));
   yTicks.forEach(t=>{
     const y=yScale(t);
     ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(M.l,y); ctx.lineTo(M.l+plotW,y); ctx.stroke();
