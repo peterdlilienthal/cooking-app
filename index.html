@@ -67,12 +67,12 @@
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
   .cal-hdr{font-size:10px;color:rgba(255,255,255,.52);text-align:center;padding:2px 0;}
   .cal-row-lbl{font-size:11px;color:rgba(255,255,255,.59);display:flex;align-items:center;justify-content:flex-end;padding-right:5px;}
-  .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);}
+  .cal-cell{aspect-ratio:1;border-radius:3px;background:rgba(255,255,255,.04);cursor:pointer;}
   .cal-cell.green{background:var(--good);opacity:.82;}
   .cal-cell.yellow{background:var(--yellow);opacity:.82;}
   .cal-cell.orange{background:var(--warn);opacity:.82;}
   .cal-cell.red{background:var(--bad);opacity:.82;}
-  .cal-cell.empty{background:transparent;}
+  .cal-cell.empty{background:transparent;cursor:default;}
   .cal-legend{display:flex;gap:14px;margin-top:9px;flex-wrap:wrap;}
   .cal-legend span{font-size:13px;color:rgba(255,255,255,.64);display:flex;align-items:center;gap:5px;}
   .cal-legend span::before{content:'';width:9px;height:9px;border-radius:2px;flex-shrink:0;}
@@ -309,6 +309,16 @@
     <div style="display:flex;justify-content:flex-end;margin-top:16px;">
       <button class="csv-btn" id="size-hint-modal-ok" type="button">OK</button>
     </div>
+  </div>
+</div>
+
+<div id="day-detail-modal" class="modal-overlay" style="display:none;">
+  <div class="modal-card" style="max-width:340px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+      <div class="card-title" style="margin-bottom:0;" id="day-detail-title">📅 Day Detail</div>
+      <button class="modal-close" id="day-detail-modal-close" type="button">&times;</button>
+    </div>
+    <p class="cmp-hint" id="day-detail-body" style="margin:0;font-size:15px;color:var(--white);"></p>
   </div>
 </div>
 
@@ -1039,6 +1049,16 @@ document.getElementById('histogram-close').addEventListener('click', ()=>{ docum
 document.getElementById('histogram-modal').addEventListener('click', e=>{
   if(e.target.id==='histogram-modal') document.getElementById('histogram-modal').style.display='none';
 });
+function showDayDetail(dateLabel, unmetKwh, unmetPct){
+  document.getElementById('day-detail-title').textContent = `📅 ${dateLabel}`;
+  document.getElementById('day-detail-body').textContent =
+    `${unmetKwh.toFixed(2)} kWh unmet (${unmetPct.toFixed(2)}% of that day's load)`;
+  document.getElementById('day-detail-modal').style.display = 'flex';
+}
+document.getElementById('day-detail-modal-close').addEventListener('click', ()=>{ document.getElementById('day-detail-modal').style.display='none'; });
+document.getElementById('day-detail-modal').addEventListener('click', e=>{
+  if(e.target.id==='day-detail-modal') document.getElementById('day-detail-modal').style.display='none';
+});
 
 /* ── Days where a config's battery SOC touches its min (10%) or max (100%) ── */
 function computeSocExtremeDays(run){
@@ -1332,6 +1352,7 @@ function renderCalendar(){
   const {pv, batt, results, year} = run;
   const isLeap = !isSyntheticYear(year) && year%4===0;
   const dim = [31,isLeap?29:28,31,30,31,30,31,31,30,31,30,31];
+  const dailyTotalWh = run.dayWh + run.nightWh;
 
   document.getElementById('cal-label').textContent = `${pv} W · ${batt} Wh`;
 
@@ -1347,8 +1368,12 @@ function renderCalendar(){
       if(d<dim[m]){
         const r = results[ri++];
         const unmetPct = (1-r.frac)*100;
+        const unmetKwh = (1-r.frac)*dailyTotalWh/1000;
         const lvl = unmetPct<=1e-9 ? 'green' : unmetPct<25 ? 'yellow' : unmetPct<=50 ? 'orange' : 'red';
-        cal.appendChild(mkDiv('cal-cell '+lvl, '', `${MONTHS[m]} ${d+1}: ${unmetPct.toFixed(1)}% unmet`));
+        const dateLabel = `${MONTHS[m]} ${d+1}`;
+        const cell = mkDiv('cal-cell '+lvl, '', `${dateLabel}: ${unmetKwh.toFixed(2)} kWh unmet (${unmetPct.toFixed(2)}%)`);
+        cell.addEventListener('click', ()=> showDayDetail(dateLabel, unmetKwh, unmetPct));
+        cal.appendChild(cell);
       } else cal.appendChild(mkDiv('cal-cell empty'));
     }
   }
