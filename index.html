@@ -61,7 +61,7 @@
   #error-msg{display:none;position:sticky;top:0;z-index:20;background:rgba(192,57,43,.15);backdrop-filter:blur(6px);border:1px solid rgba(192,57,43,.4);border-bottom:2px solid #E74C3C;padding:13px 16px;font-size:15px;color:#E74C3C;margin-bottom:10px;line-height:1.6;box-shadow:0 6px 18px rgba(0,0,0,.35);}
   #results{display:none;}
 
-  .cg{color:var(--good);} .cw{color:var(--warn);} .cb{color:var(--bad);}
+  .cg{color:var(--good);} .cn{color:var(--muted);}
 
   .cal-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y;user-select:none;}
   .cal-grid{display:grid;grid-template-columns:34px repeat(31,1fr);gap:2px;min-width:520px;}
@@ -85,7 +85,8 @@
   .mtbl tr:last-child td{border-bottom:none;}
   .mtbl tr[data-idx]{cursor:pointer;}
   .mtbl tr[data-idx]:hover{background:rgba(255,255,255,.03);}
-  .mtbl tr[data-idx].frontier-row td{color:#27AE60;}
+  .mtbl tr[data-idx].frontier-row td{color:var(--good);}
+  #cmp-tbl tr[data-idx]:not(.frontier-row) td{color:var(--muted);}
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
@@ -1176,8 +1177,7 @@ function renderCostMatrix(){
   const pvSizes = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
   const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
   const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
-  const costs = allRuns.map(r=>r.cost);
-  const minC = Math.min(...costs), maxC = Math.max(...costs);
+  const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(r=>r.cost));
   const fmt = c => '$'+Math.round(c).toLocaleString();
 
   let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
@@ -1189,8 +1189,7 @@ function renderCostMatrix(){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
       const run = allRuns[idx];
-      const frac = maxC>minC ? (run.cost-minC)/(maxC-minC) : 0;
-      const cls = frac<=0.33?'cg':frac<=0.66?'cw':'cb';
+      const cls = isFrontier[idx] ? 'cg' : 'cn';
       const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
       html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${fmt(run.cost)}</span></td>`;
     }
@@ -1219,7 +1218,7 @@ function renderUnmetKwhMatrix(){
   const battSizes = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
   const idxByKey = new Map(allRuns.map((r,i)=>[`${r.pv}|${r.batt}`, i]));
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
-  const minU = Math.min(...unmetKwhByIdx), maxU = Math.max(...unmetKwhByIdx);
+  const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(r=>r.cost));
 
   let html = `<thead><tr><th></th><th class="mtx-pv-label">PV</th>${pvSizes.map(pv=>`<th>${pv} W</th>`).join('')}</tr></thead><tbody>`;
   battSizes.forEach((batt,ri)=>{
@@ -1230,8 +1229,7 @@ function renderUnmetKwhMatrix(){
       const idx = idxByKey.get(`${pv}|${batt}`);
       if(idx===undefined){ html += '<td>—</td>'; continue; }
       const unmetKwh = unmetKwhByIdx[idx];
-      const frac = maxU>minU ? (unmetKwh-minU)/(maxU-minU) : 0;
-      const cls = frac<=0.33?'cg':frac<=0.66?'cw':'cb';
+      const cls = isFrontier[idx] ? 'cg' : 'cn';
       const activeCls = idx===activeCfgIdx ? ' active-cell' : '';
       html += `<td class="matrix-cell${activeCls}" data-idx="${idx}"><span class="${cls}">${formatUnmetKwh(unmetKwh)}</span></td>`;
     }
