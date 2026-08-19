@@ -114,14 +114,20 @@
   .modal-close:hover{color:var(--white);}
   .hist-bar{cursor:default;}
   .scatter-dot:hover{stroke:var(--sun);stroke-width:2;}
+  .intro-banner{background:var(--dusk);border-bottom:1px solid rgba(245,166,35,.25);padding:16px 32px;font-size:14px;line-height:1.55;color:rgba(255,255,255,.85);}
+  .intro-banner p{margin:0;}
+  .intro-banner p+p{margin-top:8px;}
 </style>
 </head>
 <body>
+<div class="intro-banner">
+  <p>This app shows how to size a PV array and battery bank to provide all of the energy needed, including cooking, for a household in the tropics.</p>
+  <p>After entering a target estimate of the amount of energy a household needs you should try entering a large range of sizes for the PV and batteries to see the trade-off between 100% reliability and 99%</p>
+</div>
 <header>
   <div class="sun-icon"></div>
   <div>
     <h1>Off-Grid Solar Simulator</h1>
-    <p>Hourly GHI from NLR NSRDB · auto-discovered dataset, pick your year</p>
   </div>
   <div class="badge">NLR NSRDB</div>
 </header>
@@ -142,7 +148,6 @@
         <span class="hint">e.g. 36.82 = Nairobi, Kenya</span>
       </div>
     </div>
-    <p class="cmp-hint" id="data-year-display" style="display:none;margin-top:10px;"></p>
     <div class="field" style="margin-top:14px;">
       <label>Or search by place name</label>
       <div style="display:flex;gap:8px;">
@@ -163,6 +168,7 @@
       </div>
     </div>
     <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
+    <p class="cmp-hint" id="data-fetched-display" style="display:none;margin-top:6px;"></p>
   </div>
 
   <div id="status"></div>
@@ -476,13 +482,23 @@ function updateLocationDriftWarning(){
   reportBtn.classList.toggle('btn-blocked', drifted);
   reportBtn.title = drifted ? LOCATION_DRIFT_MSG : '';
 
-  const yearEl = document.getElementById('data-year-display');
-  if(drifted || lastSimYear===null){
-    yearEl.style.display = 'none';
-  }else{
-    yearEl.textContent = `📅 Data year: ${formatYearLabel(lastSimYear)}`;
-    yearEl.style.display = 'block';
+  updateFetchedDataDisplay();
+}
+
+/* ── Shows what NSRDB actually returned for the last fetch (dataset, interval, year, and
+   the location/elevation NSRDB matched to, which can differ slightly from the entered
+   lat/lon since NSRDB snaps to its own grid) — hidden whenever the current lat/lon inputs
+   don't match the coordinates that fetch was for. ── */
+function updateFetchedDataDisplay(){
+  const dataEl = document.getElementById('data-fetched-display');
+  const lat = parseFloat(document.getElementById('lat').value);
+  const lon = parseFloat(document.getElementById('lon').value);
+  if(!nlrCache || isNaN(lat) || isNaN(lon) || nlrCache.lat!==lat || nlrCache.lon!==lon){
+    dataEl.style.display = 'none';
+    return;
   }
+  dataEl.textContent = `📡 Fetched: ${nlrCache.displayName} · ${nlrCache.interval}-min · ${formatYearLabel(nlrCache.year)} · ${nlrCache.meta}`;
+  dataEl.style.display = 'block';
 }
 ['lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', updateLocationDriftWarning));
 
