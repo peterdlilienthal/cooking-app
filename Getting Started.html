@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Getting Started · Off-Grid Solar Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&display=swap');
+  :root { --sun:#F5A623; --night:#0D1B2A; --dusk:#1E3A5F; --white:#FFFFFF; --muted:#8A94A3; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--night);color:var(--white);min-height:100vh;}
+  header{background:linear-gradient(135deg,var(--night),var(--dusk));border-bottom:1px solid rgba(245,166,35,.25);padding:22px 32px;display:flex;align-items:center;gap:16px;}
+  .sun-icon{width:40px;height:40px;background:var(--sun);border-radius:50%;box-shadow:0 0 0 7px rgba(245,166,35,.15),0 0 0 14px rgba(245,166,35,.06);flex-shrink:0;}
+  header h1{font-size:22px;font-weight:700;}
+  header a{margin-left:auto;color:var(--sun);font-weight:600;font-size:14px;text-decoration:none;}
+  header a:hover{text-decoration:underline;}
+  main{max-width:760px;margin:0 auto;padding:36px 32px 60px;line-height:1.65;font-size:16px;}
+  main p{margin-bottom:18px;}
+  h2{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--sun);margin:32px 0 14px;}
+  ol{margin:0 0 18px;padding-left:22px;}
+  ol li{margin-bottom:10px;}
+  figure{margin:24px 0;border:1px solid rgba(245,166,35,.25);border-radius:12px;overflow:hidden;background:var(--dusk);}
+  figure img{display:block;width:100%;height:auto;}
+</style>
+</head>
+<body>
+<header>
+  <div class="sun-icon"></div>
+  <h1>Getting Started</h1>
+  <a href="index.html">&larr; Back to the simulator</a>
+</header>
+<main>
+  <p>This app helps design small individual solar plus storage systems. Its main use is for households in the tropics that have no other access to electricity and want a system big enough to meet their cooking needs in addition to lighting and other household loads.</p>
+
+  <p>One of the main insights from running this is the trade-off between cost and getting the last little bit of reliability. This is especially true outside of the tropics, but the app doesn't consider backup generators. The app is good at calculating numbers, but what a user will prefer in terms of cost versus reliability is subjective. Everyone may have a different preference. With a little flexibility regarding cooking, all of the other household energy needs can be met with 100% reliability.</p>
+
+  <h2>Procedure</h2>
+  <ol>
+    <li>Click on your location on the map or type in the name of the nearest town.</li>
+    <li>Check that the cost data is consistent with what is available locally.</li>
+    <li>Enter your daytime and nighttime target loads. (Hint: either put in the minimum load that you want to be able to meet every day or a higher load and let the app tell you how much energy would be available on cloudy days.)</li>
+    <li>Enter many different sizes for the PV and battery. You will want to iterate, but the more sizes you put in the easier it is to understand the design trade-offs.</li>
+    <li>Hit the Run Simulation button</li>
+    <li>Keep iterating on the System Configurations until you get a nice curve like:</li>
+  </ol>
+
+  <figure>
+    <img src="getting-started-scatter.png" alt="Cost vs. unmet kWh/year scatter plot, showing the cost/reliability frontier">
+  </figure>
+
+  <p>The green dots are the least cost system for that level of reliability. Another way to say that is that they are the most reliable system for that cost. By clicking on a dot, you can see more information about that system in the tables that are below the graph.</p>
+
+  <p>The Cost Frontier table shows all the systems that are green dots in the graph. Marginal $/kWh is basically the slope between the chosen green dot and the next less expensive one. It shows how much it costs to get the last increment of reliability.</p>
+
+  <p>The Day-by-day Calendar shows how much you might need to conserve on cloudy days.</p>
+
+  <p>The Matrix has a Drop-down toggle that lets you look at the reliability and cost of all the systems.</p>
+
+  <p>The Report can be downloaded and read by MS Word or any other text app.</p>
+
+  <p>The final table has data on all the systems, not just the green optimal systems. The buttons on the right let you download a .csv file that can be read in Excel and has all the (8760) hourly data for that system. The Unmet kWh button as a histogram showing how much conservation might be needed on how many cloudy days.</p>
+</main>
+</body>
+</html>
