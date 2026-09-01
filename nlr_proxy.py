@@ -54,12 +54,21 @@ CORS_HEADERS = {
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
-        # Clean up console output
-        status = args[1] if len(args) > 1 else "?"
-        path   = args[0].split(" ")[1] if args else "?"
-        color  = "\033[92m" if str(status).startswith("2") else "\033[91m"
-        reset  = "\033[0m"
-        print(f"  {color}{status}{reset}  {path[:80]}")
+        # BaseHTTPRequestHandler routes two shapes through here: log_request()
+        # passes ('"GET /x HTTP/1.1"', code, size) — a splittable request line —
+        # while send_error()/log_error() pass a printf format with HTTPStatus/str
+        # args and no request line. Only format the first shape specially.
+        first = args[0] if args else ""
+        if isinstance(first, str) and " " in first:
+            status = args[1] if len(args) > 1 else "?"
+            path   = first.split(" ")[1]
+            color  = "\033[92m" if str(status).startswith("2") else "\033[91m"
+            print(f"  {color}{status}\033[0m  {path[:80]}")
+        else:
+            try:
+                print(f"  \033[91m{fmt % args}\033[0m")
+            except Exception:
+                print(f"  {fmt} {args}")
 
     def do_OPTIONS(self):
         """Handle preflight CORS check."""
@@ -140,7 +149,9 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    server = http.server.HTTPServer(("127.0.0.1", PORT), ProxyHandler)
+    # Threaded: the page fires the year probe and the year download back to back,
+    # and a slow upstream response shouldn't wedge every later request behind it.
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), ProxyHandler)
     print(f"""
 ╔══════════════════════════════════════════════╗
 ║         Solar data CORS Proxy               ║
