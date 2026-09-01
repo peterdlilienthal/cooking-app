@@ -376,10 +376,14 @@
 <script>
 const API_KEY = 'miJdkoFdKvj0XLnEyfSa9bcnHpRBv81IcDLCph6M';
 const NLR_EMAIL = 'plilient@gmail.com';
-// The nlr_proxy_worker.js Cloudflare Worker's static address. Update this after
-// deploying (`npx wrangler deploy`) — or point it at http://localhost:8765 to use
-// nlr_proxy.py for local dev instead.
-const PROXY_BASE_URL = 'https://nlr-nsrdb-proxy.plilient.workers.dev';
+// Neither the NLR NSRDB API nor PVGIS sends CORS headers, so the page reaches
+// them through a small pass-through proxy. The deployed site (GitHub Pages) uses
+// the nlr_proxy_worker.js Cloudflare Worker at its static address; local dev
+// (file:// or localhost) uses nlr_proxy.py on port 8765. Detect which by
+// hostname so there's nothing to hand-edit before committing.
+const PROXY_BASE_URL = location.hostname === 'plilient.github.io'
+  ? 'https://nlr-nsrdb-proxy.plilient.workers.dev'
+  : 'http://localhost:8765';
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
