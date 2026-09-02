@@ -418,7 +418,9 @@ let placeSearchCoords = null;
 
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
-const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
+// report-name is deliberately NOT here — it's per-export, not a saved setting, so it must
+// not persist across reloads or leak from one report into the next.
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed'];
 (function restoreSavedConfig(){
   let saved;
   try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
@@ -1640,6 +1642,12 @@ ${assumptionRows}
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+
+  // Reset the name so the next report starts from a fresh default instead of
+  // silently inheriting this one's name.
+  const nameField = document.getElementById('report-name');
+  nameField.value = '';
+  updateReportNameDisplay();
 }
 /* ── Report naming modal: one place to set the browser field, file name, and doc headers together ── */
 function openReportNameModal(){
@@ -1659,9 +1667,9 @@ function confirmReportNameAndDownload(){
   const name = document.getElementById('report-name-modal-input').value;
   const field = document.getElementById('report-name');
   field.value = name;
-  field.dispatchEvent(new Event('input', {bubbles:true})); // persists via the same CONFIG_FIELD_IDS mechanism as other inputs
+  updateReportNameDisplay();
   closeReportNameModal();
-  downloadWordReport();
+  downloadWordReport();   // reads #report-name, then clears it
 }
 document.getElementById('btn-report').addEventListener('click', openReportNameModal);
 document.getElementById('report-name-modal-close').addEventListener('click', closeReportNameModal);
