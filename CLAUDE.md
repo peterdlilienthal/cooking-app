@@ -5,12 +5,9 @@ real year of hourly PV output from PVGIS (European Commission JRC), simulates
 battery state hour-by-hour against a user-defined load, and compares many
 PV/battery size combinations side by side (reliability and cost).
 
-> **Branch note:** the `pvgis` branch (this one) has migrated the data source
-> from NREL's NSRDB (GHI only, flat-panel assumption) to PVGIS `seriescalc`,
-> which returns modelled hourly AC output at the optimal fixed tilt. `master`
-> still runs the NSRDB version — GitHub Pages only serves `master`, so nothing
-> deploys until this is merged. Before merging, `nlr_proxy_worker.js` needs the
-> PVGIS host added to its allow-list (the local `nlr_proxy.py` already has it).
+The data source was migrated from NREL's NSRDB (GHI only, flat-panel
+assumption) to PVGIS `seriescalc`, which returns modelled hourly AC output for
+a fixed array facing the equator at tilt = latitude.
 
 ## Files
 
@@ -52,14 +49,14 @@ GitHub Pages is static-only, so it can't run `nlr_proxy.py`. `nlr_proxy_worker.j
 a static address: `https://nlr-nsrdb-proxy.plilient.workers.dev`. `index.html`'s
 `PROXY_BASE_URL` const hardcodes that address for the deployed hostname — no
 runtime configuration UI, since the proxy's location doesn't vary per visitor.
-**The worker still only allows `.nlr.gov`** — porting the `ALLOWED_HOSTS`
-change from `nlr_proxy.py` into `nlr_proxy_worker.js` is a prerequisite for
-merging the `pvgis` branch. `.github/workflows/deploy-worker.yml` redeploys the worker
+The worker's `ALLOWED_HOSTS` must stay in sync with `nlr_proxy.py`'s (both
+allow PVGIS + NLR). `.github/workflows/deploy-worker.yml` redeploys the worker
 via `wrangler` whenever `nlr_proxy_worker.js` or `wrangler.toml` change on
 `master` (needs the `CLOUDFLARE_API_TOKEN`/`CLOUDFLARE_ACCOUNT_ID` repo
-secrets, already configured). The `workers.dev` subdomain is fixed per
-Cloudflare account, so `PROXY_BASE_URL` only needs updating if the worker is
-ever renamed or moved to a custom domain.
+secrets, already configured) — so a merge that touches the worker only takes
+effect on the live site once that Action finishes. The `workers.dev` subdomain
+is fixed per Cloudflare account, so `PROXY_BASE_URL` only needs updating if the
+worker is ever renamed or moved to a custom domain.
 
 ## Architecture / data flow
 

@@ -1,18 +1,20 @@
 /**
- * NLR NSRDB CORS Proxy — Cloudflare Worker
- * -----------------------------------------
- * Forwards requests to the NLR NSRDB API and adds CORS headers so the solar
- * simulator can call it directly from the browser. JS port of nlr_proxy.py,
- * for deployment on Cloudflare Workers instead of running locally.
+ * Solar data CORS Proxy — Cloudflare Worker
+ * ----------------------------------------
+ * Forwards requests to the solar-data APIs the simulator uses (PVGIS, and NLR
+ * NSRDB still) and adds CORS headers so the page can call them directly from
+ * the browser. JS port of nlr_proxy.py, for deployment on Cloudflare Workers
+ * instead of running locally.
  *
  * Deploy:
  *   npx wrangler deploy
  *
- * Then point solar_sim_nrel.html's proxy URL at the deployed
- * https://<worker>.<subdomain>.workers.dev instead of localhost:8765.
+ * index.html's PROXY_BASE_URL points at the deployed
+ * https://<worker>.<subdomain>.workers.dev for the GitHub Pages hostname.
  */
 
-const NLR_HOST = "developer.nlr.gov";
+// Hosts this proxy will forward to. Keep in sync with nlr_proxy.py's ALLOWED_HOSTS.
+const ALLOWED_HOSTS = new Set(["developer.nlr.gov", "re.jrc.ec.europa.eu"]);
 
 // NLR enforces a short burst rate limit on top of its hourly quota, so two
 // calls fired back-to-back (dataset discovery, then the CSV download) can
@@ -42,9 +44,9 @@ function jsonError(status, message) {
 async function handleProxy(request) {
   const url = new URL(request.url);
 
-  // Expect path like /proxy?url=<encoded-nlr-url>
+  // Expect path like /proxy?url=<encoded-upstream-url>
   if (url.pathname !== "/proxy" || !url.searchParams.has("url")) {
-    return jsonError(400, "Usage: /proxy?url=<encoded-nlr-api-url>");
+    return jsonError(400, "Usage: /proxy?url=<encoded-upstream-api-url>");
   }
 
   const targetUrl = url.searchParams.get("url");
@@ -56,15 +58,16 @@ async function handleProxy(request) {
     return jsonError(400, "Invalid url parameter");
   }
 
-  // Safety check — only forward to the known NLR host
-  if (targetParsed.hostname !== NLR_HOST) {
-    return jsonError(403, `Only ${NLR_HOST} is allowed. Got: ${targetParsed.hostname}`);
+  // Safety check — only forward to a known upstream host
+  const targetHost = targetParsed.hostname;
+  if (!ALLOWED_HOSTS.has(targetHost)) {
+    return jsonError(403, `Host not allowed: ${targetHost}. Allowed: ${[...ALLOWED_HOSTS].join(", ")}`);
   }
 
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
     try {
       const upstream = await fetch(targetUrl, {
-        headers: { "User-Agent": "NLR-CORS-Proxy/1.0" },
+        headers: { "User-Agent": "Solar-CORS-Proxy/1.0" },
       });
 
       if (!upstream.ok) {
@@ -75,7 +78,8 @@ async function handleProxy(request) {
           continue;
         }
 
-        // Pass through HTTP errors (e.g. 403 bad API key) with CORS headers
+        // Pass through HTTP errors (e.g. PVGIS 400 with the valid year range,
+        // NLR 403 bad API key) with CORS headers
         const body = await upstream.arrayBuffer();
         return new Response(body, {
           status: upstream.status,
@@ -94,7 +98,7 @@ async function handleProxy(request) {
         },
       });
     } catch (e) {
-      return jsonError(502, `Request to ${NLR_HOST} failed: ${e.message || e}`);
+      return jsonError(502, `Request to ${targetHost} failed: ${e.message || e}`);
     }
   }
 }
