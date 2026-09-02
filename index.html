@@ -92,6 +92,13 @@
   .mtbl tr[data-idx].active-row{background:rgba(245,166,35,.1);}
   .csv-btn{background:rgba(245,166,35,.1);border:1px solid rgba(245,166,35,.35);color:var(--sun);border-radius:7px;padding:5px 10px;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background .15s;}
   .csv-btn:hover{background:rgba(245,166,35,.22);}
+  /* Hover tooltip: put class="tip" + data-tip="…" on the element */
+  .tip{position:relative;}
+  .tip::after{content:attr(data-tip);position:absolute;left:50%;bottom:calc(100% + 10px);transform:translateX(-50%) translateY(4px);width:250px;max-width:72vw;background:var(--dusk);color:rgba(255,255,255,.92);border:1px solid rgba(245,166,35,.3);border-radius:9px;padding:9px 11px;font-family:'Space Grotesk',sans-serif;font-size:12px;font-weight:400;line-height:1.5;text-align:left;white-space:normal;opacity:0;pointer-events:none;transition:opacity .13s,transform .13s;z-index:110;}
+  .tip::before{content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) translateY(4px);border:6px solid transparent;border-top-color:rgba(245,166,35,.4);opacity:0;pointer-events:none;transition:opacity .13s,transform .13s;z-index:110;}
+  .tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0);}
+  .tip:hover::before,.tip:focus-visible::before{opacity:1;transform:translateX(-50%) translateY(0);}
+  #load-change-modal .modal-card{overflow:visible;}   /* let the "Recommend sizes" tooltip escape the card */
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
@@ -341,13 +348,13 @@
 <div id="load-change-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card" style="max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:0;">⚡ Load Changed</div>
+      <div class="card-title" style="margin-bottom:0;">⚡ Scenario changed</div>
       <button class="modal-close" id="load-change-modal-close" type="button">&times;</button>
     </div>
-    <p class="cmp-hint" style="margin:0;">Your energy load changed. Keep your current PV and battery sizes, or let the app recommend a spread based on the new load?</p>
+    <p class="cmp-hint" style="margin:0;">Your load or location changed since these sizes were set. Keep your current PV and battery sizes, or have the app suggest a fresh spread from your load?</p>
     <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
       <button class="csv-btn" id="load-change-modal-keep" type="button">Keep existing</button>
-      <button class="csv-btn" id="load-change-modal-recommend" type="button">Recommend sizes</button>
+      <button class="csv-btn tip" id="load-change-modal-recommend" type="button" data-tip="These are just a first cut. Use the tables in the Results to finetune the list of configurations.">Recommend sizes</button>
     </div>
   </div>
 </div>
@@ -712,19 +719,19 @@ function computeRecommendedSizes(dayWh, nightWh){
   return {pv, batt};
 }
 
-/* ── Gate in front of every simulation attempt: if the load changed since the sizes were
-   last confirmed, ask before running anything. The modal resolves back into
-   continueSimulation(), which re-checks and either shows the modal again or (once clear)
-   runs performSimulation() with the opts the original attempt was made with. Location
-   changes are not gated — performSimulation() just fetches fresh data automatically
-   whenever the current coordinates don't match the cached data's. ── */
-let sizesNeedReview = false;
+/* ── Gate in front of every simulation attempt: if the scenario (load or location) changed
+   since the sizes were last confirmed, ask before running anything. The modal resolves back
+   into continueSimulation(), which re-checks and either shows the modal again or (once clear)
+   runs performSimulation() with the opts the original attempt was made with. Choosing "Keep
+   existing" just clears the flag; the fresh PVGIS fetch for a new location happens in
+   performSimulation() either way. ── */
+let scenarioNeedsReview = false;
 let pendingSimOpts = null;
 let simRunning = false;
-['day-load','night-load'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ sizesNeedReview = true; }));
+['day-load','night-load','lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ scenarioNeedsReview = true; }));
 
 function continueSimulation(){
-  if(sizesNeedReview){
+  if(scenarioNeedsReview){
     document.getElementById('load-change-modal').style.display = 'flex';
     return;
   }
@@ -744,7 +751,7 @@ document.getElementById('load-change-modal').addEventListener('click', e=>{
   if(e.target.id==='load-change-modal') closeLoadChangeModal();
 });
 document.getElementById('load-change-modal-keep').addEventListener('click', ()=>{
-  sizesNeedReview = false;
+  scenarioNeedsReview = false;
   document.getElementById('load-change-modal').style.display = 'none';
   continueSimulation();
 });
@@ -759,7 +766,7 @@ document.getElementById('load-change-modal-recommend').addEventListener('click',
     pvEl.dispatchEvent(new Event('input', {bubbles:true}));
     battEl.dispatchEvent(new Event('input', {bubbles:true}));
   }
-  sizesNeedReview = false;
+  scenarioNeedsReview = false;
   document.getElementById('load-change-modal').style.display = 'none';
   continueSimulation();
 });
