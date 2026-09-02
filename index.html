@@ -1582,7 +1582,8 @@ function downloadWordReport(){
     ['PV size', `${activeRun.pv} W`],
     ['Battery size', `${activeRun.batt} Wh`],
     ['Total cost', `$${Math.round(activeRun.cost).toLocaleString()}`],
-    ['Unmet kWh/year', formatUnmetKwh(activeUnmetKwh)]
+    ['Unmet kWh/year', formatUnmetKwh(activeUnmetKwh)],
+    ['Unmet %/year', formatUnmetPct(activeUnmetKwh / computeAnnualLoadKwh(activeRun) * 100)]
   ];
   let configRows = '';
   configFields.forEach(([label,val])=>{
