@@ -405,6 +405,12 @@ function formatYearLabel(year){ return isSyntheticYear(year) ? year.toUpperCase(
 let pvgisCache = null;   // {lat,lon,hourly,meta,displayName,year,tilt,azimuth} for the last-fetched location — avoids re-hitting PVGIS when only load/PV/battery/cost inputs change
 let pvgisFetch = null;   // {lat,lon,promise} for a fetch currently in flight, so a concurrent simulation trigger can wait on it instead of racing a duplicate request
 
+// {lat,lon} the place-search field's text was geocoded to — the "place name" only stays
+// shown while lat/lon still match this. Null when the name isn't anchored to known
+// coordinates (never searched, or search failed). Persisted with the rest of the config so
+// the association survives a reload.
+let placeSearchCoords = null;
+
 /* ── Persist input configuration across reloads so edits to this file don't wipe out what you've typed ── */
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
 const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed','report-name'];
@@ -416,9 +422,11 @@ const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv
     const el = document.getElementById(id);
     if(el) el.value = saved[id];
   });
+  const psc = saved.__placeSearchCoords;
+  if(psc && typeof psc.lat === 'number' && typeof psc.lon === 'number') placeSearchCoords = psc;
 })();
 function saveConfig(){
-  const data = {};
+  const data = { __placeSearchCoords: placeSearchCoords };
   CONFIG_FIELD_IDS.forEach(id=>{
     const el = document.getElementById(id);
     if(el) data[id] = el.value;
@@ -456,18 +464,25 @@ let mapCenter = {
   lat: parseFloat(document.getElementById('lat').value) || 20,
   lon: parseFloat(document.getElementById('lon').value) || 0
 };
-let placeSearchCoords = null;  // {lat,lon} the place-search field's text was resolved to; cleared if lat/lon later drift away from it
-
-/* Clears the place-search text whenever lat/lon no longer match what it was geocoded to (manual edit, map click, etc). */
+/* Clears the place-name text (and the "Found: …" line) whenever the coordinates stop
+   matching it — a manual lat/lon edit or a map click that lands somewhere else. Also clears
+   a name that was never anchored to coordinates (typed but not searched, or restored from a
+   prior session without its coords) once the user sets an explicit location. Runs on every
+   lat/lon `input` event, including the ones searchPlaceName() dispatches — but there the
+   coords are set to match placeSearchCoords first, so it's a no-op. */
 function clearPlaceNameIfStale(){
-  if(!placeSearchCoords) return;
   const input = document.getElementById('place-search');
   if(!input.value.trim()) return;
   const lat = parseFloat(document.getElementById('lat').value), lon = parseFloat(document.getElementById('lon').value);
-  if(Math.abs(lat - placeSearchCoords.lat) > 0.00005 || Math.abs(lon - placeSearchCoords.lon) > 0.00005){
+  if(isNaN(lat) || isNaN(lon)) return;   // mid-edit / blank — wait for a real location before judging
+  const matchesName = placeSearchCoords
+    && Math.abs(lat - placeSearchCoords.lat) <= 0.00005
+    && Math.abs(lon - placeSearchCoords.lon) <= 0.00005;
+  if(!matchesName){
     input.value = '';
     document.getElementById('place-search-status').textContent = '';
     placeSearchCoords = null;
+    saveConfig();
   }
 }
 ['lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', clearPlaceNameIfStale));
