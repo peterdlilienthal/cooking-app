@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
 """
-NLR NSRDB CORS Proxy
---------------------
-Forwards requests to the NLR NSRDB API and adds CORS headers
-so the solar simulator can call it directly from the browser.
+Solar data CORS Proxy
+---------------------
+Forwards requests to the solar-data APIs the simulator uses (NLR NSRDB and
+PVGIS) and adds CORS headers so the page can call them directly from the
+browser. Neither upstream sends CORS headers, so a static-hosted page can't
+reach them without a proxy like this.
 
 Usage:
     python nlr_proxy.py
@@ -28,7 +30,11 @@ sys.stdout.reconfigure(encoding="utf-8")
 sys.stderr.reconfigure(encoding="utf-8")
 
 PORT = 8765
-NLR_HOST = "developer.nlr.gov"
+
+# Hosts this proxy will forward to. NLR is the legacy NSRDB path; PVGIS
+# (re.jrc.ec.europa.eu) is the tilted-array replacement being built on the
+# `pvgis` branch. Anything else is rejected with a 403.
+ALLOWED_HOSTS = {"developer.nlr.gov", "re.jrc.ec.europa.eu"}
 
 # NLR enforces a short burst rate limit on top of its hourly quota, so two
 # calls fired back-to-back (dataset discovery, then the CSV download) can
@@ -48,12 +54,21 @@ CORS_HEADERS = {
 class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
     def log_message(self, fmt, *args):
-        # Clean up console output
-        status = args[1] if len(args) > 1 else "?"
-        path   = args[0].split(" ")[1] if args else "?"
-        color  = "\033[92m" if str(status).startswith("2") else "\033[91m"
-        reset  = "\033[0m"
-        print(f"  {color}{status}{reset}  {path[:80]}")
+        # BaseHTTPRequestHandler routes two shapes through here: log_request()
+        # passes ('"GET /x HTTP/1.1"', code, size) — a splittable request line —
+        # while send_error()/log_error() pass a printf format with HTTPStatus/str
+        # args and no request line. Only format the first shape specially.
+        first = args[0] if args else ""
+        if isinstance(first, str) and " " in first:
+            status = args[1] if len(args) > 1 else "?"
+            path   = first.split(" ")[1]
+            color  = "\033[92m" if str(status).startswith("2") else "\033[91m"
+            print(f"  {color}{status}\033[0m  {path[:80]}")
+        else:
+            try:
+                print(f"  \033[91m{fmt % args}\033[0m")
+            except Exception:
+                print(f"  {fmt} {args}")
 
     def do_OPTIONS(self):
         """Handle preflight CORS check."""
@@ -63,21 +78,22 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
         self.end_headers()
 
     def do_GET(self):
-        """Forward GET request to NLR, return response with CORS headers."""
-        # Expect path like /proxy?url=<encoded-nlr-url>
+        """Forward GET request to an allowed upstream, return it with CORS headers."""
+        # Expect path like /proxy?url=<encoded-upstream-url>
         parsed = urllib.parse.urlparse(self.path)
         params = urllib.parse.parse_qs(parsed.query)
 
         if parsed.path != "/proxy" or "url" not in params:
-            self._send_error(400, "Usage: /proxy?url=<encoded-nlr-api-url>")
+            self._send_error(400, "Usage: /proxy?url=<encoded-upstream-api-url>")
             return
 
         target_url = params["url"][0]
 
-        # Safety check — only forward to the known NLR host
+        # Safety check — only forward to a known upstream host
         target_parsed = urllib.parse.urlparse(target_url)
-        if target_parsed.hostname != NLR_HOST:
-            self._send_error(403, f"Only {NLR_HOST} is allowed. Got: {target_parsed.hostname}")
+        target_host = target_parsed.hostname
+        if target_host not in ALLOWED_HOSTS:
+            self._send_error(403, f"Host not allowed: {target_host}. Allowed: {', '.join(sorted(ALLOWED_HOSTS))}")
             return
 
         print(f"\n→ Proxying to: {target_url[:100]}...")
@@ -96,13 +112,13 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
                     self.send_header(k, v)
                 self.end_headers()
                 self.wfile.write(body)
-                print(f"  ✓ {len(body):,} bytes from {NLR_HOST}")
+                print(f"  ✓ {len(body):,} bytes from {target_host}")
                 return
 
             except urllib.error.HTTPError as e:
                 if e.code in RETRYABLE_STATUS_CODES and attempt < MAX_ATTEMPTS:
                     wait = float(e.headers.get("Retry-After", RETRY_BACKOFF_SECONDS[attempt - 1]))
-                    print(f"  ⏳ HTTP {e.code} from {NLR_HOST} — retrying in {wait:.0f}s (attempt {attempt}/{MAX_ATTEMPTS})")
+                    print(f"  ⏳ HTTP {e.code} from {target_host} — retrying in {wait:.0f}s (attempt {attempt}/{MAX_ATTEMPTS})")
                     time.sleep(wait)
                     continue
 
@@ -114,11 +130,11 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
                     self.send_header(k, v)
                 self.end_headers()
                 self.wfile.write(body)
-                print(f"  ✗ HTTP {e.code} from {NLR_HOST}")
+                print(f"  ✗ HTTP {e.code} from {target_host}")
                 return
 
             except Exception as e:
-                self._send_error(502, f"Request to {NLR_HOST} failed: {e}")
+                self._send_error(502, f"Request to {target_host} failed: {e}")
                 return
 
     def _send_error(self, code, message):
@@ -133,14 +149,16 @@ class ProxyHandler(http.server.BaseHTTPRequestHandler):
 
 
 def main():
-    server = http.server.HTTPServer(("127.0.0.1", PORT), ProxyHandler)
+    # Threaded: the page fires the year probe and the year download back to back,
+    # and a slow upstream response shouldn't wedge every later request behind it.
+    server = http.server.ThreadingHTTPServer(("127.0.0.1", PORT), ProxyHandler)
     print(f"""
 ╔══════════════════════════════════════════════╗
-║         NLR NSRDB CORS Proxy                 ║
+║         Solar data CORS Proxy               ║
 ║         Listening on http://localhost:{PORT}  ║
 ╚══════════════════════════════════════════════╝
 
-  Requests will be forwarded to developer.nlr.gov
+  Requests will be forwarded to: {', '.join(sorted(ALLOWED_HOSTS))}
 
   Press Ctrl+C to stop.
 """)
