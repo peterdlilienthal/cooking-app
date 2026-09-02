@@ -1,4 +1,4 @@
-# Off-Grid Solar Simulator
+# Off-Grid Solar + Battery Simulator
 
 A browser-based tool for sizing an off-grid solar + battery system. It pulls a
 real year of hourly PV output from PVGIS (European Commission JRC), simulates
