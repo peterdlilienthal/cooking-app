@@ -76,16 +76,17 @@ ever renamed or moved to a custom domain.
    `String(year)`) so the calendar/leap-day call sites didn't all have to
    change — safe to inline and delete.
 3. **Hourly PV-output fetch** (`fetchPVGIS()` → `parsePVGIS()`) — one year of
-   `seriescalc` with `pvcalculation=1&peakpower=1&loss=14&optimalinclination=1`
-   and `aspect` pinned equator-facing (`lat>=0 ? 0 : 180`). Returns hourly
-   `{p, gi}`: `p` = AC watts for a 1 kWp array (PVGIS applies its own
-   temperature + 14% loss model), `gi` = plane-of-array irradiance used only to
-   separate daylight hours from night. `optimalinclination` (tilt only, robust)
-   is used deliberately instead of `optimalangles` (tilt+azimuth) — the latter
-   diverges to nonsense angles at some locations (Nairobi, Cape Town). PVGIS
-   `aspect` is literal geographic south=0, *not* auto-hemisphere. Series is
-   UTC; `toLocalTime()` rotates it by `round(lon/15)` h so `simulate()`'s
-   per-day daylight/night split lines up with a real local day.
+   `seriescalc` with `pvcalculation=1&peakpower=1&loss=14`, `angle=|lat|`
+   (tilt = latitude rule of thumb) and `aspect` equator-facing (`lat>=0 ? 0 :
+   180`). Returns hourly `{p, gi}`: `p` = AC watts for a 1 kWp array (PVGIS
+   applies its own temperature + 14% loss model), `gi` = plane-of-array
+   irradiance used only to separate daylight hours from night. PVGIS's tilt
+   optimisers aren't used — `optimalinclination` gives near-identical yields to
+   the latitude rule at these latitudes, and `optimalangles` (joint
+   tilt+azimuth) diverges to nonsense angles at some locations (Nairobi, Cape
+   Town). PVGIS `aspect` is literal geographic south=0, *not* auto-hemisphere.
+   Series is UTC; `toLocalTime()` rotates it by `round(lon/15)` h so
+   `simulate()`'s per-day daylight/night split lines up with a real local day.
 4. **Simulation** (`simulate()` in the `<script>`) — walks all 8760(ish) hours,
    tracking battery state of charge, and classifies each day as a success or
    a failure based on whether the unmet fraction of that day's total
@@ -104,12 +105,11 @@ ever renamed or moved to a custom domain.
 These are deliberate simplifications, not bugs, but worth knowing before
 trusting the numbers for a real installation:
 
-- **PV output comes straight from PVGIS** at the optimal fixed tilt PVGIS
-  computes, azimuth forced equator-facing, with PVGIS's own cell-temperature
-  and 14% system-loss model. The app does no PV modelling itself — no separate
-  derate, no POA math. Azimuth isn't optimised (equator-facing is the optimum
-  for a fixed array absent terrain shading or a morning/evening-skewed load,
-  neither of which this simulator models). Soiling beyond PVGIS's default 14%
+- **PV output comes straight from PVGIS** for a fixed array facing the equator,
+  tilted at an angle equal to latitude, with PVGIS's own cell-temperature and
+  14% system-loss model. The app does no PV modelling itself — no separate
+  derate, no POA math. Tilt = latitude is a rule of thumb, not per-site optimal
+  (optimal is usually a bit shallower). Soiling beyond PVGIS's default 14%
   (e.g. Saharan/Sahel dust) is not modelled — a candidate future input.
 - **Battery discharge has no power/rate limit** — a battery can deliver its
   entire remaining stored energy in a single hour if the load demands it.
@@ -118,8 +118,8 @@ trusting the numbers for a real installation:
   evenly across all daylight/night hours of each day. There used to be a
   "peak power" input meant to flag real spikes, but it was never wired into
   the simulation (only into a warning sentence) and has been removed.
-- Round-trip battery efficiency is a flat `√0.95` split evenly across charge
-  and discharge; minimum state of charge is a flat 10%.
+- Battery efficiency is a flat 95% each way (`cEff = dEff = 0.95`, ≈90%
+  round-trip); minimum state of charge is a flat 10%.
 
 ## Gotchas
 

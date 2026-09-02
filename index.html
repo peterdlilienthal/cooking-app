@@ -290,8 +290,9 @@
   <div class="card">
     <div class="card-title">📋 Assumptions</div>
     <ul class="assumptions-list">
-      <li>PV output is taken from PVGIS at the optimal fixed tilt for the location (equator-facing), including its cell-temperature and 14% system-loss model.</li>
-      <li>The battery is controlled to have a minimum state of charge of 10%, and a round trip efficiency of 95%.</li>
+      <li>PV panels face the equator and are tilted at an angle equal to latitude.</li>
+      <li>Output is derated by a temperature correction and a further 14% to account for various typical losses, per PVGIS.</li>
+      <li>The battery is controlled to have a minimum state of charge of 10%, and a one-way efficiency of 95%.</li>
       <li>The demand is spread evenly within the 2 demand periods.</li>
     </ul>
   </div>
@@ -868,23 +869,23 @@ function toLocalTime(hourly, lon) {
   return shift ? hourly.slice(shift).concat(hourly.slice(0, shift)) : hourly;
 }
 
-/* ── Fetch one year of hourly PV output from PVGIS. PVGIS optimises the fixed tilt itself
-   (optimalinclination); azimuth is pinned equator-facing, which is the optimum for a fixed
-   array with no terrain shading or morning/evening-skewed load — neither of which this
-   simulator models — and PVGIS's own joint optimiser (optimalangles) diverges at some
-   locations. ── */
+/* ── Fetch one year of hourly PV output from PVGIS. The array is modelled equator-facing
+   and tilted at an angle equal to |latitude| (the classic rule of thumb). PVGIS's own tilt
+   optimisers aren't used — `optimalinclination` gives near-identical yields to the
+   latitude rule at these latitudes, and `optimalangles` (joint tilt+azimuth) diverges to
+   nonsense angles at some locations. ── */
 async function fetchPVGIS(lat, lon, year) {
   const params = new URLSearchParams({
-    lat:                String(lat),
-    lon:                String(lon),
-    startyear:          String(year),
-    endyear:            String(year),
-    pvcalculation:      '1',
-    peakpower:          '1',      // 1 kWp → hourly P is W per kWp; simulate() scales by nameplate
-    loss:               '14',     // PVGIS default system losses (cabling, inverter, mismatch, soiling)
-    optimalinclination: '1',
-    aspect:             lat >= 0 ? '0' : '180',   // 0 = south, 180 = north → equator-facing
-    outputformat:       'json'
+    lat:           String(lat),
+    lon:           String(lon),
+    startyear:     String(year),
+    endyear:       String(year),
+    pvcalculation: '1',
+    peakpower:     '1',      // 1 kWp → hourly P is W per kWp; simulate() scales by nameplate
+    loss:          '14',     // PVGIS default system losses (cabling, inverter, mismatch, soiling)
+    angle:         String(Math.abs(lat)),         // tilt = |latitude|
+    aspect:        lat >= 0 ? '0' : '180',        // 0 = south, 180 = north → equator-facing
+    outputformat:  'json'
   });
 
   const pvgisUrl = `${PVGIS_API}?${params}`;
@@ -915,8 +916,8 @@ function simulate(hourly, dayWh, nightWh, year, pvW, battWh){
   const kWp    = pvW/1000;   // PVGIS `p` is per 1 kWp
   const capWh  = battWh;
   const minWh  = capWh*0.10;
-  const cEff   = Math.sqrt(0.95);
-  const dEff   = Math.sqrt(0.95);
+  const cEff   = 0.95;   // one-way (charge) efficiency
+  const dEff   = 0.95;   // one-way (discharge) efficiency
   let   batWh  = capWh*0.5;
 
   const isLeap= !isSyntheticYear(year) && year%4===0;  // PVGIS keeps Feb 29 for leap years (all in range are exact %4)
@@ -1547,8 +1548,9 @@ function downloadWordReport(){
   const unmetKwhRows = buildMatrixRows(run => formatUnmetKwh(computeTotalUnmetKwh(run)));
 
   const ASSUMPTIONS = [
-    'PV output is taken from PVGIS at the optimal fixed tilt for the location (equator-facing), including its cell-temperature and 14% system-loss model.',
-    'The battery is controlled to have a minimum state of charge of 10%, and a round trip efficiency of 95%.',
+    'PV panels face the equator and are tilted at an angle equal to latitude.',
+    'Output is derated by a temperature correction and a further 14% to account for various typical losses, per PVGIS.',
+    'The battery is controlled to have a minimum state of charge of 10%, and a one-way efficiency of 95%.',
     'The demand is spread evenly within the 2 demand periods.'
   ];
   const assumptionRows = ASSUMPTIONS.map(a => `\\pard\\li420\\fi-420 ${esc('•')}\\tab ${esc(a)}\\par`).join('\n');
