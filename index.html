@@ -387,13 +387,16 @@
 // of its own. Needs no API key.
 const PVGIS_API = 'https://re.jrc.ec.europa.eu/api/v5_3/seriescalc';
 // PVGIS doesn't send CORS headers, so the page reaches it through a small
-// pass-through proxy. The deployed site (GitHub Pages) uses the
-// nlr_proxy_worker.js Cloudflare Worker at its static address; local dev
-// (file:// or localhost) uses nlr_proxy.py on port 8765. Detect which by
-// hostname so there's nothing to hand-edit before committing.
-const PROXY_BASE_URL = location.hostname === 'plilient.github.io'
-  ? 'https://nlr-nsrdb-proxy.plilient.workers.dev'
-  : 'http://localhost:8765';
+// pass-through proxy. Local dev (file:// or localhost) uses nlr_proxy.py on
+// port 8765; anywhere else (the deployed GitHub Pages site, or any other host)
+// uses the nlr_proxy_worker.js Cloudflare Worker. Detecting "local" rather than
+// a specific prod hostname means nothing to hand-edit, and it survives the repo
+// moving or getting a custom domain.
+const IS_LOCAL = !location.hostname
+  || ['localhost', '127.0.0.1', '[::1]', '0.0.0.0'].includes(location.hostname);
+const PROXY_BASE_URL = IS_LOCAL
+  ? 'http://localhost:8765'
+  : 'https://nlr-nsrdb-proxy.plilient.workers.dev';
 const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
