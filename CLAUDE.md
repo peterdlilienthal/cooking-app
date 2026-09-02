@@ -118,8 +118,8 @@ trusting the numbers for a real installation:
   evenly across all daylight/night hours of each day. There used to be a
   "peak power" input meant to flag real spikes, but it was never wired into
   the simulation (only into a warning sentence) and has been removed.
-- Battery efficiency is a flat 95% each way (`cEff = dEff = 0.95`, ≈90%
-  round-trip); minimum state of charge is a flat 10%.
+- Round-trip battery efficiency is a flat 95% (`cEff = dEff = √0.95`, split
+  evenly across charge and discharge); minimum state of charge is a flat 10%.
 
 ## Gotchas
 
