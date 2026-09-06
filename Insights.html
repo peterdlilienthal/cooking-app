@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Insights · Off-Grid Solar + Battery Simulator</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Space+Mono:wght@400;700&display=swap');
+  :root { --sun:#F5A623; --night:#0D1B2A; --dusk:#1E3A5F; --white:#FFFFFF; --muted:#8A94A3; }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Space Grotesk',sans-serif;background:var(--night);color:var(--white);min-height:100vh;}
+  header{background:linear-gradient(135deg,var(--night),var(--dusk));border-bottom:1px solid rgba(245,166,35,.25);padding:22px 32px;display:flex;align-items:center;gap:16px;}
+  .sun-icon{width:40px;height:40px;background:var(--sun);border-radius:50%;box-shadow:0 0 0 7px rgba(245,166,35,.15),0 0 0 14px rgba(245,166,35,.06);flex-shrink:0;}
+  header h1{font-size:22px;font-weight:700;}
+  header a{margin-left:auto;color:var(--sun);font-weight:600;font-size:14px;text-decoration:none;white-space:nowrap;}
+  header a:hover{text-decoration:underline;}
+  main{max-width:820px;margin:0 auto;padding:36px 32px 72px;line-height:1.65;font-size:16px;}
+  main p{margin-bottom:18px;}
+  .doc-title{font-size:26px;font-weight:700;line-height:1.3;margin-bottom:6px;}
+  .doc-subtitle{font-size:18px;font-weight:500;color:rgba(255,255,255,.8);margin-bottom:28px;}
+  h2{font-size:12px;font-weight:600;letter-spacing:1.5px;text-transform:uppercase;color:var(--sun);margin:38px 0 14px;padding-top:10px;border-top:1px solid rgba(245,166,35,.2);}
+  h3{font-size:16px;font-weight:600;margin:26px 0 12px;color:rgba(255,255,255,.92);}
+  ul{margin:0 0 18px;padding-left:22px;}
+  ul li{margin-bottom:9px;}
+  a{color:var(--sun);}
+  figure{margin:26px 0;border:1px solid rgba(245,166,35,.25);border-radius:12px;overflow:hidden;background:#f7f7f5;}
+  figure.dark{background:var(--night);}
+  figure img{display:block;width:100%;height:auto;}
+  figcaption{font-size:13px;color:var(--muted);padding:10px 14px;background:var(--dusk);border-top:1px solid rgba(245,166,35,.2);}
+  .table-wrap{overflow-x:auto;margin:22px 0;}
+  table{border-collapse:collapse;width:100%;font-size:14px;font-family:'Space Mono',monospace;}
+  th,td{padding:9px 12px;text-align:right;border-bottom:1px solid rgba(255,255,255,.1);white-space:nowrap;}
+  th:first-child,td:first-child{text-align:left;}
+  thead th{color:var(--sun);font-weight:700;border-bottom:2px solid rgba(245,166,35,.4);font-size:12px;}
+  tbody tr:hover{background:rgba(255,255,255,.03);}
+  .climate-table{max-width:360px;font-family:'Space Grotesk',sans-serif;}
+  .climate-table td,.climate-table th{text-align:center;}
+  .appendix-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px;margin:20px 0;}
+  .appendix-grid figure{margin:0;}
+  .note{font-size:14px;color:var(--muted);border-left:3px solid rgba(245,166,35,.4);padding-left:14px;margin:18px 0;}
+</style>
+</head>
+<body>
+<header>
+  <div class="sun-icon"></div>
+  <h1>Insights</h1>
+  <a href="index.html">&larr; Back to the simulator</a>
+</header>
+<main>
+  <p class="doc-title">Insights From Modeling Solar + Battery Systems for Off-grid Energy Access, Including Cooking</p>
+
+  <p>Over the last 30 years solar PV has made accelerating progress providing energy access in developing countries. The initial focus was household lighting, but it became clear that productive uses and rural industries like tea plantations were even more promising. Despite that progress, there are about 2 billion people still cooking using smoky biomass with substantial impacts on health, safety, and the environment. Cooking is by far the biggest energy challenge for people in Africa and other developing countries. It requires about ten times the energy of all their other household energy needs combined. Until recently, solar PV and batteries were too expensive to reasonably meet that demand. That has now changed. Not only can PV + battery systems be designed to meet cooking demands, but these larger systems improve the supply chain and financial viability of the small solar businesses that are crucial for expanded energy access.</p>
+
+  <p>The focus of this paper and the accompanying app is the approximately 700 million people who do not currently have any access to electricity. We show that solar + battery systems that meet all household&rsquo;s energy needs, including cooking, can be deployed for as little as $500 (try it in <a href="index.html">the app</a>). That cost compares favorably against the cost of a grid connection or a couple years&rsquo; supply of charcoal.</p>
+
+  <p>Several other useful insights are derived from the modeling we performed with the app. These include:</p>
+  <ul>
+    <li>The impact of climate</li>
+    <li>The impact of latitude</li>
+    <li>The trade-off between reliability and cost</li>
+    <li>The value of simple forms of load management</li>
+  </ul>
+
+  <h2>Methodology</h2>
+  <p>To keep it simple the app has the following assumptions.</p>
+  <ul>
+    <li>There is no backup generator. We assume that traditional cooking methods are still available when needed.</li>
+    <li>This is intended for individual stand-alone systems and not for mini-grids. This assumes that the user can handle any load management themselves without the cost of meters, poles and wires and administrative costs.</li>
+    <li>PV panels face the equator and are tilted at an angle equal to latitude.</li>
+    <li>Output is derated by a temperature correction and a further 14% to account for various typical losses, per PVGIS.</li>
+    <li>The battery is controlled to have a minimum state of charge of 10%, and a round trip efficiency of 95%.</li>
+    <li>The demand is spread evenly within a daytime demand period and a separate nighttime demand period.</li>
+    <li>Although we track how often the battery reaches its maximum state of charge, we don&rsquo;t track the amount of excess energy available above the target load.</li>
+    <li>We have a user-defined cost input for the inverter and other electronic controls, but don&rsquo;t distinguish between AC and DC applications.</li>
+    <li>We model the energy content of the battery in Wh&rsquo;s but not its potential discharge rate in watts.</li>
+    <li>We don&rsquo;t model other energy loads a household may have and assume that any lighting and small electronic loads are small enough that a system that can provide even only a portion of the cooking load can handle the much smaller loads with 100% reliability.</li>
+    <li>We do not currently have a front end with lists of electrical cooking appliances and energy requirements for typical meals.</li>
+  </ul>
+
+  <p>The app is designed to quickly model a large range of both PV and battery sizes to evaluate the trade-off between cost and reliability. It uses plane-of-array solar data from PVGIS with user inputs for the $/watt for the PV and $/kWh for the battery. Those both scale linearly with the size of their respective components. A separate fixed cost is included for the inverter, controls, and miscellaneous costs.</p>
+
+  <p>The first output is a scatter plot of all of the modeled systems as a function of their reliability and cost as shown in Figure 1. The systems along the Pareto frontier are shown in green. These are systems for which there are no other systems that are both less expensive and more reliable. The steeply increasing slope of this graph shows quite clearly the extra costs associated with eliminating the last small amounts of unmet energy.</p>
+
+  <figure>
+    <img src="insights/fig1-scatter.png" alt="Cost vs. unmet-kWh/year scatter plot for Namibia, with the green cost/reliability frontier and a highlighted break-point system">
+    <figcaption>Figure 1 &mdash; Results for Namibia with a 1 kWh/day load.</figcaption>
+  </figure>
+
+  <p>The data behind this graph is then presented in several tables. A report that can be opened in Word, hourly data that can be opened in Excel, and a histogram of unmet load per day can be downloaded for each modeled system. We modeled four locations, as shown below. The vast majority of unelectrified households are in tropical regions, but the results for mid-latitude regions are interesting in their own right.</p>
+
+  <div class="table-wrap">
+    <table class="climate-table">
+      <thead><tr><th></th><th>Dry</th><th>Rainy</th></tr></thead>
+      <tbody>
+        <tr><th>Tropical</th><td>Namibia</td><td>Gabon</td></tr>
+        <tr><th>Mid-latitude</th><td>Mongolia</td><td>Assam</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>We analyzed three systems in Namibia and two systems in each of the other locations. For all locations we assumed a target daytime load of 500 watt-hours and a similar target nighttime load of 500 watt-hours. This should be sufficient for most households, especially using electric pressure cookers (EPCs). We also measured an energy consumption of 120 watt-hours for an EPC cooking 4 portions of rice. See a full list of assumptions in Appendix A.</p>
+
+  <h2>Results</h2>
+  <p>As can be seen in Figure 1, there is a wide range of costs depending on the tolerance for small percentages of unmet energy. In this example, some systems cost as little as $440, if the user can be flexible about their cooking load. What can also be seen from this graph is how much steeper the curve gets as you get close to 0 unmet energy. The actual choice among the options depends on user preferences. We identify a break point that is highlighted in the graph. At this point the cost is $500 and the unmet energy is 0.2% (0.7 kWh/year) of the annual load. From Figure 2 we can see the distribution of that unmet load. On most days it is less than 40 watt-hours and on only 1 day is it more than 160 watt-hours. The same information is presented in a calendar in Figure 3.</p>
+
+  <figure class="dark">
+    <img src="insights/fig2-histogram.png" alt="Histogram of daily unmet energy: most days near zero, one day above 160 Wh">
+    <figcaption>Figure 2 &mdash; Distribution of daily unmet energy for the break-point system.</figcaption>
+  </figure>
+
+  <p>In contrast to these very low-cost systems, the cost of a system with zero unmet energy is $640. That is an extra $140 (a 28% increase) just to supply the last 0.7 kWh/year of energy.</p>
+
+  <figure class="dark">
+    <img src="insights/fig3-calendar.png" alt="Day-by-day calendar for the break-point system, almost entirely green with a handful of amber days">
+    <figcaption>Figure 3 &mdash; Day-by-day calendar of unmet energy for the break-point system.</figcaption>
+  </figure>
+
+  <p>We performed the same analysis on all four locations. Those results are summarized in the following table.</p>
+
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th>Location</th><th>Latitude</th><th>Climate</th>
+          <th>Unmet&nbsp;%</th><th>Unmet&nbsp;kWh</th>
+          <th>Cost<br>(with load&nbsp;mgmt)</th><th>Cost<br>(without)</th><th>% cost<br>increase</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>Namibia</td><td>&minus;17.9744</td><td>Desert</td><td>1.6%</td><td>5.9</td><td>$430</td><td>$640</td><td>49%</td></tr>
+        <tr><td>Namibia</td><td>&minus;17.9744</td><td>Desert</td><td>0.2%</td><td>0.7</td><td>$500</td><td>$640</td><td>28%</td></tr>
+        <tr><td>Gabon</td><td>&minus;0.2234</td><td>Rainy</td><td>0.2%</td><td>0.6</td><td>$690</td><td>$810</td><td>17%</td></tr>
+        <tr><td>Mongolia</td><td>45.5903</td><td>Desert</td><td>1.8%</td><td>6.7</td><td>$560</td><td>$960</td><td>71%</td></tr>
+        <tr><td>Assam</td><td>27.6973</td><td>Rainy</td><td>2.5%</td><td>9.3</td><td>$860</td><td>$1,190</td><td>38%</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <p>An obvious result is that rainy locations like Gabon and Assam require larger and more expensive systems. Load management for these systems consists simply of cooking less energy-intensive meals on very cloudy days, or potentially reverting to other cooking methods on the occasional days with the worst solar resource. On the other hand, load management is probably easier in a rainy location because firewood or other forms of biomass would be more readily available.</p>
+
+  <p>Another result that is fairly obvious with a little thought is that mid-latitude locations require more load management and have a higher cost premium without it. This is because of the reduced solar radiation in the winter, which is not a problem in tropical locations. A simple solution to this problem is the use of a backup generator, which would be practical for mini-grid applications and larger commercial or industrial applications, but is not practical for individual households and systems of these sizes.</p>
+
+  <h2>Conclusion</h2>
+  <p>This analysis shows quite clearly that individual solar home systems with batteries can provide all energy needs for most households, most importantly including their cooking loads. These systems can be provided at a cost that compares favorably to the cost of grid connections or charcoal purchases. The analysis also shows how beneficial small amounts of load management can be in reducing the cost of these systems. The variation in these results between locations can be easily analyzed with a simple model.</p>
+
+  <h2>Appendix A &mdash; Assumptions</h2>
+  <p>For over 30 years I&rsquo;ve promoted solar PV as a way to provide energy access in developing countries. All that time I heard that the greatest energy need was for cooking, with 2 billion people still cooking using smoky biomass, often indoors, with substantial impacts on health, safety, and the environment. Until recently, PV was too expensive for this application. That is no longer true, as this simple app can show.</p>
+  <p>To keep it simple we have made the following assumptions.</p>
+  <ul>
+    <li>There is no backup generator. We assume that traditional cooking methods are still available when needed.</li>
+    <li>This is intended for individual stand-alone systems and not for mini-grids. This assumes that the user can handle any load management themselves without the cost of meters, poles and wires and administrative costs.</li>
+    <li>We assume a flat energy load during daylight hours and a separate flat load after sunset through the night.</li>
+    <li>Although we only track how often the battery reaches its maximum state of charge, we don&rsquo;t track the amount of excess energy available above the target load.</li>
+    <li>We have a user-defined cost input for the inverter and other electronic controls, but don&rsquo;t distinguish between AC and DC applications. We model the energy content of the battery in Wh&rsquo;s but not its potential discharge rate in watts.</li>
+    <li>We don&rsquo;t model other energy loads a household may have and assume that any lighting and small electronic loads are small enough that a system that can provide even only a portion of the cooking load can handle the much smaller loads with 100% reliability.</li>
+    <li>We would like to add a front end with lists of electrical cooking appliances and energy requirements for typical meals after we receive input from people with field experience.</li>
+  </ul>
+  <p>The app demonstrates substantial cost savings if the user can manage their own loads by simply paying attention to the weather.</p>
+  <p>We hope it is self-explanatory and would love to hear about anything you find confusing or any suggested enhancements.</p>
+
+  <h2>Appendix B &mdash; Cost vs. Reliability by System</h2>
+  <p class="note">The scatter plots behind the summary table &mdash; one per modeled system, grouped by location.</p>
+
+  <h3>Namibia</h3>
+  <div class="appendix-grid">
+    <figure><img src="insights/appendix-namibia-1.png" alt="Namibia cost vs. unmet-kWh scatter plot, system 1"></figure>
+    <figure><img src="insights/appendix-namibia-2.png" alt="Namibia cost vs. unmet-kWh scatter plot, system 2"></figure>
+    <figure><img src="insights/appendix-namibia-3.png" alt="Namibia cost vs. unmet-kWh scatter plot, system 3"></figure>
+  </div>
+
+  <h3>Gabon</h3>
+  <div class="appendix-grid">
+    <figure><img src="insights/appendix-gabon-1.png" alt="Gabon cost vs. unmet-kWh scatter plot, system 1"></figure>
+    <figure><img src="insights/appendix-gabon-2.png" alt="Gabon cost vs. unmet-kWh scatter plot, system 2"></figure>
+  </div>
+
+  <h3>Mongolia</h3>
+  <div class="appendix-grid">
+    <figure><img src="insights/appendix-mongolia-1.png" alt="Mongolia cost vs. unmet-kWh scatter plot, system 1"></figure>
+    <figure><img src="insights/appendix-mongolia-2.png" alt="Mongolia cost vs. unmet-kWh scatter plot, system 2"></figure>
+  </div>
+
+  <h3>Assam</h3>
+  <div class="appendix-grid">
+    <figure><img src="insights/appendix-assam-1.png" alt="Assam cost vs. unmet-kWh scatter plot, system 1"></figure>
+    <figure><img src="insights/appendix-assam-2.png" alt="Assam cost vs. unmet-kWh scatter plot, system 2"></figure>
+  </div>
+</main>
+</body>
+</html>
