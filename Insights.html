@@ -35,9 +35,8 @@
   tbody tr:hover{background:rgba(255,255,255,.03);}
   .climate-table{max-width:360px;font-family:'Space Grotesk',sans-serif;}
   .climate-table td,.climate-table th{text-align:center;}
-  .sys-pair{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:14px 0 30px;}
-  .sys-pair figure{margin:0;}
-  @media(max-width:680px){.sys-pair{grid-template-columns:1fr;}}
+  .report-page{margin:12px 0 34px;max-width:620px;background:#fff;}
+  .report-page img{display:block;width:100%;height:auto;}
   .note{font-size:14px;color:var(--muted);border-left:3px solid rgba(245,166,35,.4);padding-left:14px;margin:18px 0;}
 </style>
 </head>
@@ -159,62 +158,35 @@
   <p>The app demonstrates substantial cost savings if the user can manage their own loads by simply paying attention to the weather.</p>
   <p>We hope it is self-explanatory and would love to hear about anything you find confusing or any suggested enhancements.</p>
 
-  <h2>Appendix B &mdash; Cost vs. Reliability by System</h2>
-  <p class="note">For each modeled system: the cost-vs-unmet-energy scatter plot (green = the cost/reliability frontier) and the day-by-day calendar of unmet energy, grouped by location.</p>
+  <h2>Appendix B &mdash; System Reports</h2>
+  <p class="note">The full app report for each modeled system &mdash; inputs, the cost-vs-reliability scatter plot, the day-by-day calendar, and the highlighted configuration. Nine systems: three in Namibia and two in each of the other locations, each named by its annual reliability.</p>
 
-  <h3>Namibia &mdash; 250 W / 650 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-namibia-1-scatter.png" alt="Namibia 250 W / 650 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-namibia-1-calendar.png" alt="Namibia 250 W / 650 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Namibia &mdash; 98.4% reliable (250 W / 650 Wh, $430)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-namibia-1.png" alt="App report for Namibia at 98.4% reliability: 250 W PV / 650 Wh battery, $430"></figure>
 
-  <h3>Namibia &mdash; 300 W / 750 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-namibia-2-scatter.png" alt="Namibia 300 W / 750 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-namibia-2-calendar.png" alt="Namibia 300 W / 750 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Namibia &mdash; 99.8% reliable (300 W / 750 Wh, $500)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-namibia-2.png" alt="App report for Namibia at 99.8% reliability: 300 W PV / 750 Wh battery, $500"></figure>
 
-  <h3>Namibia &mdash; 350 W / 1200 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-namibia-3-scatter.png" alt="Namibia 350 W / 1200 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-namibia-3-calendar.png" alt="Namibia 350 W / 1200 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Namibia &mdash; 100% reliable (350 W / 1200 Wh, $640)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-namibia-3.png" alt="App report for Namibia at 100% reliability: 350 W PV / 1200 Wh battery, $640"></figure>
 
-  <h3>Gabon &mdash; 400 W / 1200 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-gabon-1-scatter.png" alt="Gabon 400 W / 1200 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-gabon-1-calendar.png" alt="Gabon 400 W / 1200 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Gabon &mdash; 99.8% reliable (400 W / 1200 Wh, $690)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-gabon-1.png" alt="App report for Gabon at 99.8% reliability: 400 W PV / 1200 Wh battery, $690"></figure>
 
-  <h3>Gabon &mdash; 500 W / 1300 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-gabon-2-scatter.png" alt="Gabon 500 W / 1300 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-gabon-2-calendar.png" alt="Gabon 500 W / 1300 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Gabon &mdash; 100% reliable (500 W / 1300 Wh, $810)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-gabon-2.png" alt="App report for Gabon at 100% reliability: 500 W PV / 1300 Wh battery, $810"></figure>
 
-  <h3>Mongolia &mdash; 300 W / 1050 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-mongolia-1-scatter.png" alt="Mongolia 300 W / 1050 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-mongolia-1-calendar.png" alt="Mongolia 300 W / 1050 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Mongolia &mdash; 98% reliable (300 W / 1050 Wh, $560)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-mongolia-1.png" alt="App report for Mongolia at 98% reliability: 300 W PV / 1050 Wh battery, $560"></figure>
 
-  <h3>Mongolia &mdash; 600 W / 1550 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-mongolia-2-scatter.png" alt="Mongolia 600 W / 1550 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-mongolia-2-calendar.png" alt="Mongolia 600 W / 1550 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Mongolia &mdash; 100% reliable (600 W / 1550 Wh, $960)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-mongolia-2.png" alt="App report for Mongolia at 100% reliability: 600 W PV / 1550 Wh battery, $960"></figure>
 
-  <h3>Assam &mdash; 600 W / 1050 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-assam-1-scatter.png" alt="Assam 600 W / 1050 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-assam-1-calendar.png" alt="Assam 600 W / 1050 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Assam &mdash; 98% reliable (600 W / 1050 Wh, $860)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-assam-1.png" alt="App report for Assam at 98% reliability: 600 W PV / 1050 Wh battery, $860"></figure>
 
-  <h3>Assam &mdash; 800 W / 1700 Wh</h3>
-  <div class="sys-pair">
-    <figure><img src="insights/appendix-assam-2-scatter.png" alt="Assam 800 W / 1700 Wh: cost vs. unmet-kWh scatter plot"><figcaption>Cost vs. unmet energy</figcaption></figure>
-    <figure><img src="insights/appendix-assam-2-calendar.png" alt="Assam 800 W / 1700 Wh: day-by-day calendar of unmet energy"><figcaption>Day-by-day calendar</figcaption></figure>
-  </div>
+  <h3>Assam &mdash; 100% reliable (800 W / 1700 Wh, $1,190)</h3>
+  <figure class="report-page"><img loading="lazy" src="insights/appendix-assam-2.png" alt="App report for Assam at 100% reliability: 800 W PV / 1700 Wh battery, $1,190"></figure>
 </main>
 </body>
 </html>
