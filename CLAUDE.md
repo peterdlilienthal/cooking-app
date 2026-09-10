@@ -89,13 +89,70 @@ worker is ever renamed or moved to a custom domain.
    a failure based on whether the unmet fraction of that day's total
    (day+night) load exceeds the user-set "acceptable unmet energy" tolerance
    (`unmet-tolerance` input, default 10%). Runs once per PV-size ×
-   battery-size combination (the cross product of the two comma-delimited
-   size-list inputs).
+   battery-size combination.
+   - **Search grid** (`buildAutoGrid()`) — the PV and battery size lists are
+     no longer typed by the user; they're derived from the load. The grid
+     starts at PV = `0.2 × (dayWh+nightWh)` and battery = `0.8 × nightWh`.
+     Jumps aren't uniform: `pvStep()` is 50 W below `PV_STEP_BREAK` (1000 W)
+     and 100 W at/above it; `battStep()` is 100 Wh below `BATT_STEP_BREAK`
+     (1600 Wh) and 200 Wh at/above. The axes are kept as explicit `pvSizes` /
+     `battSizes` arrays. After each new column/row, `scanColumn` / `scanRow`
+     walk it from the cheap end to the first config meeting 100% of the annual
+     load (monotonic in both PV and battery, so that's the line's cheapest
+     reliable config). Two phases:
+     - **Explore** (nothing reliable yet) — steepest descent: each step,
+       `sim()` one more PV step vs one more battery step and commit whichever
+       cuts annual unmet kWh more. Walks along the *binding* axis instead of
+       inflating both in blind alternation (which massively overshoots the
+       non-binding axis when the two needs are lopsided — e.g. a Sahel site
+       needing 350 W but 1600 Wh: alternation ran PV out to 950 W, steepest
+       descent stops it at 400 W).
+     - **Converge** (a reliable config known) — track `bestReliableCost` and
+       `reliablePvMin` / `reliableBattMin` (lightest PV / battery reliable at
+       any pairing). Each axis grows independently while the cheapest config
+       its next step could add a reliable system at still undercuts
+       `bestReliableCost` — next PV column priced at `reliableBattMin -
+       BATT_STEP`, next battery row at `reliablePvMin - PV_STEP` (one step
+       below the lightest reliable size seen, a small hedge since adding to one
+       axis tends to shave a step off the other's need). An axis also freezes
+       after `GRID_STALL` (6) of its steps in a row fail to lower
+       `bestReliableCost` — the diminishing-returns stop that terminates a
+       $0-cost axis (which the price test alone would grow forever). Stop when
+       both axes are frozen.
+     There is **no per-axis size limit** (a lopsided 9×38 grid is fine). Two
+     backstops: phase 1 stops if the best next step barely dents unmet energy
+     for `GRID_STALL` steps (a hopeless site), and `MAX_GRID_CELLS` (1000) caps
+     PV-count × battery-count so a huge search can't build a grid the rest of
+     the UI (per-config `hourlyLog`, the full comparison table, the matrix)
+     can't render smoothly. Any early stop surfaces a note via `showSizeHint()`
+     pointing at the "Extend the Grid" card. `sim()` results (annual unmet kWh
+     + reliable flag) are memoised. The computed lists are written back into
+     the (now hidden) `pv-sizes` / `batt-sizes` inputs so the report and
+     localStorage persistence are unchanged.
+   - **Manual grid extension** (`extendGrid()`, "➕ Extend the Grid" card
+     under the matrix) — after a run the user can add an arbitrary PV column
+     or battery row. It simulates only the new cells (filling the whole cross
+     with the other axis, so the grid stays rectangular) against `lastSim`
+     (the PVGIS data / load / costs the run used), appends them to `allRuns`,
+     and re-renders. `activeCfgIdx` indexes `allRuns` and this only appends,
+     so the selection stays valid. Blocked while the location has drifted.
 5. **Rendering** — a comparison table, two PV×battery matrices (not-met days,
    total cost), a cost-vs-reliability scatter plot, and a detail view
    (calendar/monthly/verdict) for whichever config is currently selected.
    Selection state (`activeCfgIdx`) is shared across all of these — clicking
    any row/cell/dot re-renders all of them to stay in sync.
+   - **Scatter axis truncation** — the scatter x-axis is filtered by the
+     `#scatter-met-floor` input in the card header ("Show ≥ __ % load met"):
+     hides configs below that "% of load met" and rescales the x-axis (and its
+     `% of load met` tick labels) to end exactly at the floor; blank /
+     out-of-range ⇒ no x truncation. The y-axis is *always* capped at the
+     `SCATTER_RELIABLE_CAP`-th (2nd) cheapest 100%-reliable config's cost, so
+     only that many reliable systems (all at unmet = 0) stay in view and the
+     y-axis rescales to that band — no cap when fewer than that many configs
+     reach 100%. `scatterMetFloor()` / `scatterUnmetCutoff()` /
+     `scatterCostCutoff()` and the combined `inView(i)` predicate are shared by
+     `renderUnmetKwhScatter()` and the Word-report canvas so the export matches
+     the screen.
 
 ## Simulation model — known simplifications
 

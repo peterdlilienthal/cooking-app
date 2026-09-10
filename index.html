@@ -97,7 +97,6 @@
   .tip::before{content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) translateY(4px);border:6px solid transparent;border-top-color:rgba(245,166,35,.4);opacity:0;pointer-events:none;transition:opacity .13s,transform .13s;z-index:110;}
   .tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0);}
   .tip:hover::before,.tip:focus-visible::before{opacity:1;transform:translateX(-50%) translateY(0);}
-  #load-change-modal .modal-card{overflow:visible;}   /* let the "Recommend sizes" tooltip escape the card */
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
@@ -220,19 +219,14 @@
 
   <div class="card">
     <div class="card-title">🔆 System Configurations</div>
-    <p class="sys-note">Every run tests every combination of PV size × battery size, so you can compare them directly.</p>
-    <div class="fields">
-      <div class="field">
-        <label>PV sizes to simulate (W)</label>
-        <input type="text" id="pv-sizes" value="240,400,560,720,880">
-        <span class="hint">Comma-separated, e.g. 350,700,1050</span>
-      </div>
-      <div class="field">
-        <label>Battery sizes to simulate (Wh)</label>
-        <input type="text" id="batt-sizes" value="390,510,630,720,810">
-        <span class="hint">Comma-separated, e.g. 1000,2000,3000</span>
-      </div>
-    </div>
+    <p class="sys-note">The PV × battery search grid is built automatically from your load. It
+      starts at the smallest sensible system — PV = 0.2 × your total daily load, battery =
+      0.8 × your night-time load — then grows (50 W / 100 Wh steps, widening to 100 W / 200 Wh
+      for larger sizes) until every configuration not yet simulated would cost more than the
+      cheapest one already found that meets 100% of your annual load. Every combination in the
+      grid is simulated so you can compare them directly.</p>
+    <input type="hidden" id="pv-sizes" value="240,400,560,720,880">
+    <input type="hidden" id="batt-sizes" value="390,510,630,720,810">
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
@@ -243,9 +237,17 @@
 
   <div id="results">
     <div class="card">
-      <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span>📉 Cost vs. Unmet kWh/Year</span>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <span>Show ≥</span>
+          <input type="number" id="scatter-met-floor" class="metric-select" min="0" max="100" step="1" placeholder="0" style="width:64px;text-align:right;">
+          <span>% load met</span>
+        </label>
+      </div>
       <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 418" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
+      <p class="cmp-hint" id="scatter-filter-note" style="margin-top:6px;" hidden></p>
     </div>
     <div class="card">
       <div class="card-title">🏆 Cost Frontier</div>
@@ -274,6 +276,29 @@
       </div>
       <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="combo-matrix"></table></div>
       <p class="cmp-hint" id="combo-matrix-hint"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">➕ Extend the Grid</div>
+      <p class="cmp-hint" style="margin-top:0;">Add a PV size or battery size beyond the automatic grid. Only the new
+        combinations are simulated — they're appended to the results and every chart and table updates. Uses the same
+        location, load, and costs as the last run.</p>
+      <div class="fields">
+        <div class="field">
+          <label>Add PV size (W)</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="extend-pv-input" min="1" step="50" style="flex:1;min-width:0;">
+            <button class="csv-btn" id="extend-pv-btn" type="button">Add column</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Add battery size (Wh)</label>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <input type="number" id="extend-batt-input" min="1" step="100" style="flex:1;min-width:0;">
+            <button class="csv-btn" id="extend-batt-btn" type="button">Add row</button>
+          </div>
+        </div>
+      </div>
+      <p class="cmp-hint" id="extend-grid-msg" style="margin-bottom:0;"></p>
     </div>
     <div class="card" id="chart-card">
       <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
@@ -344,20 +369,6 @@
   </div>
 </div>
 
-<div id="load-change-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-card" style="max-width:420px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:0;">⚡ Scenario changed</div>
-      <button class="modal-close" id="load-change-modal-close" type="button">&times;</button>
-    </div>
-    <p class="cmp-hint" style="margin:0;">Your load or location changed since these sizes were set. Keep your current PV and battery sizes, or have the app suggest a fresh spread from your load?</p>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-      <button class="csv-btn" id="load-change-modal-keep" type="button">Keep existing</button>
-      <button class="csv-btn tip" id="load-change-modal-recommend" type="button" data-tip="These are just a first cut. Use the tables in the Results to finetune the list of configurations.">Recommend sizes</button>
-    </div>
-  </div>
-</div>
-
 <div id="year-picker-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card" style="max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -402,6 +413,7 @@ const MONTHS  = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','No
 
 let allRuns = null;      // [{pv,batt,results,hourlyLog,cost,...}, ...] populated after a run
 let activeCfgIdx = 0;    // which config is highlighted across the charts and tables (defaults to lowest-unmet-kWh after a run)
+let lastSim = null;      // {hourly,dayWh,nightWh,year,meta,displayName,tilt,azimuth,cost*} of the last run — lets extendGrid() add cells consistently
 let lastSimLat = null, lastSimLon = null, lastSimYear = null;  // coordinates/year the current allRuns/report were actually simulated for
 
 /* ── `year` is always a real calendar year now. isSyntheticYear/formatYearLabel are vestigial
@@ -690,90 +702,239 @@ document.getElementById('place-search').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){ e.preventDefault(); searchPlaceName(); }
 });
 
-/* ── Parse a comma-separated list of positive numbers ── */
-function parseSizeList(str, label){
-  const nums = str.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
-  if(!nums.length) throw new Error(`Please enter at least one value for ${label}.`);
-  if(nums.some(n=>isNaN(n)||n<=0)) throw new Error(`${label} must be a comma-separated list of positive numbers (e.g. 1,2,3).`);
-  return [...new Set(nums)].sort((a,b)=>a-b);
+/* ── Automatic PV × battery search grid ──────────────────────────────────────────────
+   The user no longer types size lists. The grid is derived from the load and grown
+   against a real year of PV data:
+     • PV axis starts at 0.2 × total daily load; jumps are PV_STEP W, doubling to
+       2×PV_STEP once the size reaches PV_STEP_BREAK (`pvStep()`)
+     • battery axis starts at 0.8 × night-time load; jumps are BATT_STEP Wh, doubling
+       to 2×BATT_STEP once the size reaches BATT_STEP_BREAK (`battStep()`)
+
+   Two phases:
+
+   1. Explore (nothing reaches 100% yet) — steepest descent toward the reliability
+      frontier: each step, simulate one more PV step vs one more battery step and commit
+      whichever cuts annual unmet energy more. This walks straight at the frontier along
+      the binding axis instead of inflating both axes in blind alternation (which badly
+      overshoots the non-binding axis when the two needs are lopsided).
+
+   2. Converge (a 100%-reliable config is known) — track `bestReliableCost` and the
+      lightest PV / battery that have reached 100% at any pairing (the reliability
+      frontier). Each axis keeps growing, independently, only while the cheapest config
+      its next step could add a reliable system at still undercuts `bestReliableCost` —
+      the next PV column priced at one step below `reliableBattMin`, the next battery row
+      at one step below `reliablePvMin` (the lightest reliable size seen, since
+      adding to one axis tends to shave a step off the other's requirement — a small
+      hedge on the frontier estimate). Once an axis's next step no longer undercuts, that
+      axis is frozen; when both are frozen the search stops.
+
+   After each new column/row, scanColumn/scanRow walk it from the cheap end to the first
+   100% hit (monotonic in both PV and battery, so that's the line's cheapest reliable
+   config).
+
+   There is no fixed per-axis size limit. Termination is by diminishing returns —
+   phase 1 stops once the best next step barely dents annual unmet energy for GRID_STALL
+   steps running (a hopeless site); phase 2 freezes an axis once GRID_STALL of its steps
+   in a row fail to lower `bestReliableCost` (covers a $0-cost axis, which the frontier
+   price test alone would grow forever). MAX_GRID_CELLS is the last-resort ceiling on
+   PV-count × battery-count so a pathological input can't build a giant grid. Any of
+   these three stopping early leaves a note; users can also extend the grid by hand
+   afterwards (see extendGrid). ── */
+const PV_STEP = 50;            // W  — base grid jump
+const BATT_STEP = 100;         // Wh — base grid jump
+const PV_STEP_BREAK = 1000;    // W  — PV jumps double to 2×PV_STEP at/above this size
+const BATT_STEP_BREAK = 1600;  // Wh — battery jumps double to 2×BATT_STEP at/above this
+const pvStep   = w  => w  >= PV_STEP_BREAK   ? PV_STEP   * 2 : PV_STEP;
+const battStep = wh => wh >= BATT_STEP_BREAK ? BATT_STEP * 2 : BATT_STEP;
+const GRID_STALL = 6;          // stop growing an axis after this many gain-free steps
+const MAX_GRID_CELLS = 1000;   // hard ceiling on PV-count × battery-count — no per-axis
+                               // limit (a lopsided 12×60 grid is fine), just a stop on
+                               // giant searches the rest of the UI can't render smoothly
+
+function buildAutoGrid(hourly, dayWh, nightWh, year, costPvW, costBattKwh, costFixed){
+  const pv0   = Math.max(Math.round(0.2*(dayWh+nightWh)), PV_STEP);
+  const batt0 = Math.max(Math.round(0.8*nightWh), BATT_STEP);
+  const daily = dayWh + nightWh;
+  const costOf = (pvW, battWh) => pvW*costPvW + (battWh/1000)*costBattKwh + costFixed;
+
+  const memo = new Map();
+  const sim = (pvW, battWh) => {
+    const k = pvW + '|' + battWh;
+    let v = memo.get(k);
+    if(v === undefined){
+      // annual unmet kWh, same per-day 1e-9 floor as computeTotalUnmetKwh()
+      const unmetKwh = simulate(hourly, dayWh, nightWh, year, pvW, battWh).results
+        .reduce((s,r)=>{ const u = 1 - r.frac; return s + (u <= 1e-9 ? 0 : u) * daily; }, 0) / 1000;
+      v = {unmetKwh, reliable: unmetKwh === 0};
+      memo.set(k, v);
+    }
+    return v;
+  };
+
+  // The two axes as explicit value lists — jumps aren't uniform (pvStep/battStep).
+  const pvSizes = [pv0], battSizes = [batt0];
+  const pvMax   = () => pvSizes[pvSizes.length - 1];
+  const battMax = () => battSizes[battSizes.length - 1];
+  const growPvAxis   = () => pvSizes.push(pvMax() + pvStep(pvMax()));
+  const growBattAxis = () => battSizes.push(battMax() + battStep(battMax()));
+  const gridCells = () => pvSizes.length * battSizes.length;
+
+  let bestReliableCost = Infinity;
+  let reliablePvMin = Infinity, reliableBattMin = Infinity;
+  const consider = (pvW, battWh) => {
+    bestReliableCost = Math.min(bestReliableCost, costOf(pvW, battWh));
+    reliablePvMin    = Math.min(reliablePvMin, pvW);
+    reliableBattMin  = Math.min(reliableBattMin, battWh);
+  };
+  const scanColumn = pvW => {
+    for(const b of battSizes) if(sim(pvW, b).reliable){ consider(pvW, b); return; }
+  };
+  const scanRow = battWh => {
+    for(const p of pvSizes) if(sim(p, battWh).reliable){ consider(p, battWh); return; }
+  };
+  scanColumn(pv0);
+
+  const capMsg = {
+    none: `No configuration in the search met 100% of the annual load — even the largest system shown falls short at this location and load. Use the "Extend the Grid" card to try larger systems.`,
+    some: `A cheaper 100%-reliable system might exist beyond the grid — use the "Extend the Grid" card to check.`
+  };
+  let note = '';
+  let cornerUnmet = sim(pv0, batt0).unmetKwh;   // phase-1 progress tracker
+  let exploreStall = 0, pvStale = 0, battStale = 0;
+
+  while(true){
+    if(bestReliableCost === Infinity){
+      // Phase 1: steepest descent toward the frontier.
+      const viaPv    = sim(pvMax() + pvStep(pvMax()), battMax()).unmetKwh;
+      const viaBatt   = sim(pvMax(), battMax() + battStep(battMax())).unmetKwh;
+      const stepUnmet = Math.min(viaPv, viaBatt);
+      exploreStall = stepUnmet >= cornerUnmet * (1 - 1e-4) ? exploreStall + 1 : 0;
+      cornerUnmet = stepUnmet;
+      if(viaPv < viaBatt){ growPvAxis(); scanColumn(pvMax()); }
+      else               { growBattAxis(); scanRow(battMax()); }
+      if(bestReliableCost === Infinity && (exploreStall >= GRID_STALL || gridCells() >= MAX_GRID_CELLS)){
+        note = capMsg.none; break;
+      }
+      continue;
+    }
+
+    // Phase 2: grow each axis while its next step could still hold a cheaper reliable
+    // config AND recent growth on that axis is still lowering bestReliableCost (the
+    // latter guards a $0-cost axis, which the price test alone would grow forever).
+    // The frontier hedge prices the next line one grid step below the lightest reliable
+    // size seen so far (battStep(x-1) is the jump into x, not out of it).
+    const roomy = gridCells() < MAX_GRID_CELLS;
+    const hedgeBatt = Math.max(batt0, reliableBattMin - battStep(reliableBattMin - 1));
+    const hedgePv   = Math.max(pv0,   reliablePvMin   - pvStep(reliablePvMin - 1));
+    const pvNextCost   = costOf(pvMax() + pvStep(pvMax()), hedgeBatt);
+    const battNextCost = costOf(hedgePv, battMax() + battStep(battMax()));
+    const growPv   = roomy && pvStale   < GRID_STALL && pvNextCost   < bestReliableCost;
+    const growBatt = roomy && battStale < GRID_STALL && battNextCost < bestReliableCost;
+    if(!growPv && !growBatt){
+      if(pvNextCost < bestReliableCost || battNextCost < bestReliableCost) note = capMsg.some;
+      break;
+    }
+    if(growPv){
+      const before = bestReliableCost;
+      growPvAxis(); scanColumn(pvMax());
+      pvStale = bestReliableCost < before ? 0 : pvStale + 1;
+    }
+    if(growBatt){
+      const before = bestReliableCost;
+      growBattAxis(); scanRow(battMax());
+      battStale = bestReliableCost < before ? 0 : battStale + 1;
+    }
+  }
+
+  return {pvSizes, battSizes, note};
 }
 
+/* The grid actually searched by the last run, for updateComboPreview(). `extended` flips
+   true once the user adds a PV column / battery row by hand. */
+let lastAutoGrid = null;
 function updateComboPreview(){
   const el = document.getElementById('combo-preview');
-  try{
-    const pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
-    const battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
-    const combos = [];
-    for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}Wh`);
-    el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}`;
-    el.style.color = '';
-  }catch(e){
-    el.textContent = e.message;
-    el.style.color = '#E74C3C';
-  }
-}
-['pv-sizes','batt-sizes'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
-updateComboPreview();
-
-/* ── Recommended PV/battery sizes derived from the current day+night load ── */
-function computeRecommendedSizes(dayWh, nightWh){
-  const total = dayWh + nightWh;
-  const pv = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2].map(m => Math.round(m*total));
-  const batt = [0.9, 1.3, 1.7, 2.1, 2.4, 2.7, 3.1, 3.4].map(m => Math.round(m*nightWh));
-  return {pv, batt};
-}
-
-/* ── Gate in front of every simulation attempt: if the scenario (load or location) changed
-   since the sizes were last confirmed, ask before running anything. The modal resolves back
-   into continueSimulation(), which re-checks and either shows the modal again or (once clear)
-   runs performSimulation() with the opts the original attempt was made with. Choosing "Keep
-   existing" just clears the flag; the fresh PVGIS fetch for a new location happens in
-   performSimulation() either way. ── */
-let scenarioNeedsReview = false;
-let pendingSimOpts = null;
-let simRunning = false;
-['day-load','night-load','lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ scenarioNeedsReview = true; }));
-
-function continueSimulation(){
-  if(scenarioNeedsReview){
-    document.getElementById('load-change-modal').style.display = 'flex';
+  el.style.color = '';
+  if(!lastAutoGrid){
+    el.textContent = 'The grid is generated automatically from your load when you run the simulation.';
     return;
   }
+  const {pvSizes, battSizes, extended} = lastAutoGrid;
+  el.textContent = `${extended ? 'Simulated' : 'Searched'} ${pvSizes.length*battSizes.length} configurations — `
+    + `${pvSizes.length} PV size${pvSizes.length===1?'':'s'} (${pvSizes[0]}–${pvSizes[pvSizes.length-1]} W) × `
+    + `${battSizes.length} battery size${battSizes.length===1?'':'s'} (${battSizes[0]}–${battSizes[battSizes.length-1]} Wh)`
+    + `${extended ? ', grid extended by hand.' : '.'}`;
+}
+updateComboPreview();
+
+/* ── Manually widen a finished grid. `axis` is 'pv' or 'batt', `value` the new size in
+   W / Wh. Simulates only the new PV×battery cells (against the same PVGIS data, load and
+   costs the run used, kept in lastSim), appends them to allRuns, and re-renders. Each
+   add fills the whole cross with the other axis, so the grid stays rectangular;
+   activeCfgIdx indexes allRuns and we only append, so the selection stays valid. ── */
+function extendGrid(axis, value){
+  const el = document.getElementById('extend-grid-msg');
+  const show = (text, ok) => { el.textContent = text; el.style.color = ok ? '' : '#E74C3C'; };
+  if(!lastSim || !allRuns || !allRuns.length){ show('Run a simulation first.', false); return; }
+  if(locationHasDrifted()){ show('The location changed since the last run — run the simulation again first.', false); return; }
+  if(!Number.isFinite(value) || value <= 0){ show('Enter a size greater than zero.', false); return; }
+  value = Math.round(value);
+
+  const {hourly, dayWh, nightWh, year, meta, displayName, tilt, azimuth, costPvW, costBattKwh, costFixed} = lastSim;
+  const pvs   = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const batts = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  if(axis==='pv'   && pvs.includes(value)){   show(`PV ${value} W is already in the grid.`, false); return; }
+  if(axis==='batt' && batts.includes(value)){ show(`Battery ${value} Wh is already in the grid.`, false); return; }
+
+  const pairs = axis==='pv' ? batts.map(b=>[value,b]) : pvs.map(p=>[p,value]);
+  for(const [pv, batt] of pairs){
+    const {results, hourlyLog} = simulate(hourly, dayWh, nightWh, year, pv, batt);
+    const cost = pv*costPvW + (batt/1000)*costBattKwh + costFixed;
+    allRuns.push({pv, batt, results, hourlyLog, cost, year, meta, dayWh, nightWh, datasetLabel: displayName, tilt, azimuth});
+  }
+
+  const allPvs   = [...new Set(allRuns.map(r=>r.pv))].sort((a,b)=>a-b);
+  const allBatts = [...new Set(allRuns.map(r=>r.batt))].sort((a,b)=>a-b);
+  document.getElementById('pv-sizes').value   = allPvs.join(',');
+  document.getElementById('batt-sizes').value = allBatts.join(',');
+  saveConfig();
+  lastAutoGrid = {pvSizes: allPvs, battSizes: allBatts, extended: true};
+  updateComboPreview();
+  updateExtendGridDefaults();
+  renderFrontierTable();
+  renderComparison();
+  renderMatrix();
+  renderUnmetKwhScatter();
+  renderCalendar();
+  show(`Added the ${value} ${axis==='pv'?'W column':'Wh row'} — ${pairs.length} new configuration${pairs.length===1?'':'s'} simulated.`, true);
+}
+
+/* Pre-fill the extend-grid inputs with one step beyond the current grid. */
+function updateExtendGridDefaults(){
+  if(!allRuns || !allRuns.length) return;
+  const maxPv = Math.max(...allRuns.map(r=>r.pv)), maxBatt = Math.max(...allRuns.map(r=>r.batt));
+  document.getElementById('extend-pv-input').value   = maxPv   + pvStep(maxPv);
+  document.getElementById('extend-batt-input').value = maxBatt + battStep(maxBatt);
+}
+document.getElementById('extend-pv-btn').addEventListener('click',
+  ()=> extendGrid('pv', parseFloat(document.getElementById('extend-pv-input').value)));
+document.getElementById('extend-batt-btn').addEventListener('click',
+  ()=> extendGrid('batt', parseFloat(document.getElementById('extend-batt-input').value)));
+[['extend-pv-input','extend-pv-btn'],['extend-batt-input','extend-batt-btn']].forEach(([inp,btn])=>{
+  document.getElementById(inp).addEventListener('keydown', e=>{
+    if(e.key==='Enter'){ e.preventDefault(); document.getElementById(btn).click(); }
+  });
+});
+
+let pendingSimOpts = null;
+let simRunning = false;
+
+function continueSimulation(){
   const opts = pendingSimOpts;
   pendingSimOpts = null;
   if(opts) performSimulation(opts).finally(()=>{ simRunning = false; });
   else simRunning = false;
 }
-
-function closeLoadChangeModal(){
-  document.getElementById('load-change-modal').style.display = 'none';
-  pendingSimOpts = null;
-  simRunning = false;
-}
-document.getElementById('load-change-modal-close').addEventListener('click', closeLoadChangeModal);
-document.getElementById('load-change-modal').addEventListener('click', e=>{
-  if(e.target.id==='load-change-modal') closeLoadChangeModal();
-});
-document.getElementById('load-change-modal-keep').addEventListener('click', ()=>{
-  scenarioNeedsReview = false;
-  document.getElementById('load-change-modal').style.display = 'none';
-  continueSimulation();
-});
-document.getElementById('load-change-modal-recommend').addEventListener('click', ()=>{
-  const dayWh = parseFloat(document.getElementById('day-load').value);
-  const nightWh = parseFloat(document.getElementById('night-load').value);
-  if(!isNaN(dayWh) && !isNaN(nightWh)){
-    const {pv, batt} = computeRecommendedSizes(dayWh, nightWh);
-    const pvEl = document.getElementById('pv-sizes'), battEl = document.getElementById('batt-sizes');
-    pvEl.value = pv.join(',');
-    battEl.value = batt.join(',');
-    pvEl.dispatchEvent(new Event('input', {bubbles:true}));
-    battEl.dispatchEvent(new Event('input', {bubbles:true}));
-  }
-  scenarioNeedsReview = false;
-  document.getElementById('load-change-modal').style.display = 'none';
-  continueSimulation();
-});
 
 const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
@@ -1291,6 +1452,29 @@ function renderMatrix(){
 }
 document.getElementById('matrix-metric').addEventListener('change', renderMatrix);
 
+/* ── The scatter has two x/y truncations:
+   • x-axis — hide configs below the "% of load met" floor typed in the chart header
+     (`#scatter-met-floor`); blank / out of range ⇒ no truncation.
+   • y-axis — always cap cost at the SCATTER_RELIABLE_CAP-th cheapest 100%-reliable
+     system, so only that many reliable systems (which all sit at unmet = 0) stay in
+     view. No cap when fewer than that many configs reach 100%. ── */
+const SCATTER_RELIABLE_CAP = 2;
+function scatterMetFloor(){
+  const v = parseFloat(document.getElementById('scatter-met-floor').value);
+  return (isNaN(v) || v <= 0) ? null : Math.min(v, 100);
+}
+function scatterUnmetCutoff(annualLoadKwh){
+  const floor = scatterMetFloor();
+  return floor==null ? Infinity : Math.max(0, annualLoadKwh*(1 - floor/100));
+}
+/* Cost of the SCATTER_RELIABLE_CAP-th cheapest 100%-reliable config — configs above it
+   are hidden. Infinity ⇒ no cap (fewer than that many configs reach 100%). */
+function scatterCostCutoff(unmetKwhByIdx){
+  const reliableCosts = allRuns.filter((_,i)=> unmetKwhByIdx[i] <= 1e-9)
+    .map(r=>r.cost).sort((a,b)=>a-b);
+  return SCATTER_RELIABLE_CAP < reliableCosts.length ? reliableCosts[SCATTER_RELIABLE_CAP-1] : Infinity;
+}
+
 /* ── Render: cost vs. unmet-kWh/year scatter plot ── */
 function renderUnmetKwhScatter(){
   const W=640, H=418;
@@ -1300,10 +1484,17 @@ function renderUnmetKwhScatter(){
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
   const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
-  const xs = unmetKwhByIdx;
-  const ys = allRuns.map(run=>run.cost);
+  const xCutoff = scatterUnmetCutoff(annualLoadKwh);
+  const costCutoff = scatterCostCutoff(unmetKwhByIdx);
+  const inView = i => unmetKwhByIdx[i] <= xCutoff + 1e-9 && allRuns[i].cost <= costCutoff + 1e-9;
+  const shown = allRuns.filter((_,i)=> inView(i));
+  // If the filters hide everything, keep the axes scaled to the full set (no dots draw).
+  const scaleSet = shown.length ? shown : allRuns;
+
+  const xs = scaleSet.map(run=>computeTotalUnmetKwh(run));
+  const ys = scaleSet.map(run=>run.cost);
   const xMaxRaw = Math.max(...xs);
-  const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
+  const xMax = Math.max(0.001, Math.min(xMaxRaw>0 ? xMaxRaw*1.15 : 1, xCutoff));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
@@ -1343,6 +1534,7 @@ function renderUnmetKwhScatter(){
 
   allRuns.forEach((run,i)=>{
     const unmetKwh = unmetKwhByIdx[i];
+    if(!inView(i)) return;   // hidden by the "% of load met" floor or the y-axis cap
     const cx=xScale(unmetKwh), cy=yScale(run.cost);
     const fill = isFrontier[i] ? 'var(--good)' : 'var(--muted)';
     const isActive = i===activeCfgIdx;
@@ -1363,7 +1555,21 @@ function renderUnmetKwhScatter(){
       renderCalendar();
     });
   });
+
+  const floor = scatterMetFloor();
+  const parts = [];
+  if(floor != null) parts.push(`x-axis truncated at ${formatLoadMetPct(floor)} of load met`);
+  if(costCutoff !== Infinity) parts.push(`y-axis capped at the ${SCATTER_RELIABLE_CAP} cheapest 100%-reliable systems ($${Math.round(costCutoff).toLocaleString()})`);
+  const noteEl = document.getElementById('scatter-filter-note');
+  if(!parts.length){
+    noteEl.hidden = true;
+  }else{
+    noteEl.hidden = false;
+    const clearHint = floor != null ? ` Clear the field to lift the x-axis truncation.` : '';
+    noteEl.textContent = `${parts.join('; ')} — showing ${shown.length} of ${allRuns.length} configuration${allRuns.length===1?'':'s'}.${clearHint}`;
+  }
 }
+document.getElementById('scatter-met-floor').addEventListener('input', ()=>{ if(allRuns && allRuns.length) renderUnmetKwhScatter(); });
 
 /* ── Render: day-by-day calendar for the highlighted config, colored by % of load met ── */
 function renderCalendar(){
@@ -1408,10 +1614,18 @@ function buildReportUnmetKwhScatterCanvas(){
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
   const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
-  const xs = unmetKwhByIdx;
-  const ys = allRuns.map(run=>run.cost);
+  // Match the on-screen scatter's optional x-axis (% of load met) and y-axis
+  // (Nth-cheapest reliable) truncations.
+  const xCutoff = scatterUnmetCutoff(annualLoadKwh);
+  const costCutoff = scatterCostCutoff(unmetKwhByIdx);
+  const inView = i => unmetKwhByIdx[i] <= xCutoff + 1e-9 && allRuns[i].cost <= costCutoff + 1e-9;
+  const scaleSet = allRuns.filter((_,i)=> inView(i));
+  const shown = scaleSet.length ? scaleSet : allRuns;
+
+  const xs = shown.map(run=>computeTotalUnmetKwh(run));
+  const ys = shown.map(run=>run.cost);
   const xMaxRaw = Math.max(...xs);
-  const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
+  const xMax = Math.max(0.001, Math.min(xMaxRaw>0 ? xMaxRaw*1.15 : 1, xCutoff));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
@@ -1459,6 +1673,7 @@ function buildReportUnmetKwhScatterCanvas(){
   ctx.restore();
 
   allRuns.forEach((run,i)=>{
+    if(!inView(i)) return;   // hidden by the "% of load met" floor or the y-axis cap
     const cx=xScale(unmetKwhByIdx[i]), cy=yScale(run.cost);
     const fill = isFrontier[i] ? '#27AE60' : '#8A94A3';
     const isActive = i===activeCfgIdx;
@@ -1770,14 +1985,6 @@ async function performSimulation({scroll=true}={}){
   if(isNaN(costBattKwh)||costBattKwh<0){setErr('$ per kWh (battery) must be a non-negative number.');return;}
   if(isNaN(costFixed)||costFixed<0){setErr('Inverter, controls & misc ($) must be a non-negative number.');return;}
 
-  let pvSizes, battSizes;
-  try{
-    pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
-    battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
-  }catch(e){ setErr(e.message); return; }
-  const CONFIGS = [];
-  for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
-
   let dataPromise;
   if(pvgisCache && pvgisCache.lat===lat && pvgisCache.lon===lon){
     dataPromise = Promise.resolve(pvgisCache);
@@ -1792,7 +1999,18 @@ async function performSimulation({scroll=true}={}){
   try{
     const {year, hourly, meta, displayName, tilt, azimuth} = await dataPromise;
 
-    setSt(`Received ${hourly.length} hourly PV-output values. Simulating ${CONFIGS.length} configuration${CONFIGS.length===1?'':'s'}…`);
+    setSt(`Received ${hourly.length} hourly PV-output values. Building the search grid…`);
+    await new Promise(r=>setTimeout(r,40));
+
+    const {pvSizes, battSizes, note: autoGridNote} = buildAutoGrid(hourly, dayWh, nightWh, year, costPvW, costBattKwh, costFixed);
+    lastAutoGrid = {pvSizes, battSizes};
+    document.getElementById('pv-sizes').value = pvSizes.join(',');
+    document.getElementById('batt-sizes').value = battSizes.join(',');
+    saveConfig();
+    const CONFIGS = [];
+    for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
+
+    setSt(`Simulating ${CONFIGS.length} configuration${CONFIGS.length===1?'':'s'}…`);
     await new Promise(r=>setTimeout(r,40));
 
     allRuns = CONFIGS.map(cfg=>{
@@ -1804,25 +2022,23 @@ async function performSimulation({scroll=true}={}){
         datasetLabel: displayName, tilt, azimuth
       };
     });
+    // Everything extendGrid() needs to simulate more cells consistently with this run.
+    lastSim = {hourly, dayWh, nightWh, year, meta, displayName, tilt, azimuth, costPvW, costBattKwh, costFixed};
     // default selection to the config with the least unmet energy
     activeCfgIdx = allRuns.reduce((bi,run,i,arr)=> computeTotalUnmetKwh(run)<computeTotalUnmetKwh(arr[bi])?i:bi, 0);
     lastSimLat = lat; lastSimLon = lon; lastSimYear = year;
     updateLocationDriftWarning();
 
-    const unmetPcts = allRuns.map(run=> computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100);
-    if(!unmetPcts.some(p=>p>1)){
-      showSizeHint('Add smaller PV and battery sizes');
-    }else if(!unmetPcts.some(p=>p<1)){
-      showSizeHint('Add larger PV and battery sizes');
-    }
-
     setSt('');
     document.getElementById('results').style.display='block';
+    updateComboPreview();
+    updateExtendGridDefaults();
     renderFrontierTable();
     renderComparison();
     renderMatrix();
     renderUnmetKwhScatter();
     renderCalendar();
+    if(autoGridNote) showSizeHint(autoGridNote);
     if(scroll) document.getElementById('results').scrollIntoView({behavior:'smooth',block:'start'});
   }catch(err){
     setSt('');
