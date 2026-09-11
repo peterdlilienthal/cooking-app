@@ -176,7 +176,7 @@
         <button class="csv-btn" id="map-zoom-in" type="button">+</button>
       </div>
     </div>
-    <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
+    <p class="cmp-hint">Map tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener" style="color:var(--sun)">Esri</a> &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors, and the GIS User Community</p>
     <p class="cmp-hint" id="data-fetched-display" style="display:none;margin-top:6px;"></p>
   </div>
 
@@ -577,8 +577,7 @@ function renderMap(){
       if(ty < 0 || ty >= numTiles) continue;
       const wrappedX = ((tx % numTiles) + numTiles) % numTiles;
       const left = tx * TILE_SIZE - originX, top = ty * TILE_SIZE - originY;
-      const sub = 'abc'[Math.abs(tx + ty) % 3];
-      html += `<img src="https://${sub}.tile.openstreetmap.org/${mapZoom}/${wrappedX}/${ty}.png" style="position:absolute;left:${left}px;top:${top}px;width:${TILE_SIZE}px;height:${TILE_SIZE}px;" draggable="false" alt="">`;
+      html += `<img src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${mapZoom}/${ty}/${wrappedX}" style="position:absolute;left:${left}px;top:${top}px;width:${TILE_SIZE}px;height:${TILE_SIZE}px;" draggable="false" alt="">`;
     }
   }
   tilesEl.innerHTML = html;
