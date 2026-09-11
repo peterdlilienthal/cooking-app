@@ -25,6 +25,9 @@
 
   .fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
   @media(max-width:580px){.fields{grid-template-columns:1fr;}}
+  .fields-3{grid-template-columns:repeat(3,1fr);}
+  @media(max-width:580px){.fields-3{grid-template-columns:1fr 1fr;}}
+  .range-heading{font-size:12px;font-weight:600;letter-spacing:1px;text-transform:uppercase;color:var(--sun);margin:16px 0 8px;}
   .field{display:flex;flex-direction:column;gap:5px;}
   .field label{font-size:14px;color:rgba(255,255,255,.7);font-weight:500;}
   .field input,.field select{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:10px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:15px;transition:border-color .2s;outline:none;width:100%;}
@@ -97,7 +100,6 @@
   .tip::before{content:'';position:absolute;left:50%;bottom:calc(100% + 4px);transform:translateX(-50%) translateY(4px);border:6px solid transparent;border-top-color:rgba(245,166,35,.4);opacity:0;pointer-events:none;transition:opacity .13s,transform .13s;z-index:110;}
   .tip:hover::after,.tip:focus-visible::after{opacity:1;transform:translateX(-50%) translateY(0);}
   .tip:hover::before,.tip:focus-visible::before{opacity:1;transform:translateX(-50%) translateY(0);}
-  #load-change-modal .modal-card{overflow:visible;}   /* let the "Recommend sizes" tooltip escape the card */
   .report-name-input{background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.12);border-radius:8px;padding:10px 13px;color:var(--white);font-family:'Space Mono',monospace;font-size:16px;outline:none;width:100%;transition:border-color .2s;}
   .report-name-input:focus{border-color:var(--sun);background:rgba(245,166,35,.08);}
   .cmp-hint{font-size:13px;color:rgba(255,255,255,.54);margin-top:10px;}
@@ -130,7 +132,7 @@
 </head>
 <body>
 <div class="intro-banner">
-  <p><a class="getting-started-link" href="Getting Started.html">Getting Started</a><a class="getting-started-link" href="Insights.html">Insights</a></p>
+  <p><a class="getting-started-link" href="Getting Started.html">Getting Started</a><!-- Insights.html link hidden until it points to the newer document --></p>
 </div>
 <header>
   <div class="sun-icon"></div>
@@ -174,7 +176,7 @@
         <button class="csv-btn" id="map-zoom-in" type="button">+</button>
       </div>
     </div>
-    <p class="cmp-hint">Map data &copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener" style="color:var(--sun)">OpenStreetMap</a> contributors</p>
+    <p class="cmp-hint">Map tiles &copy; <a href="https://www.esri.com" target="_blank" rel="noopener" style="color:var(--sun)">Esri</a> &mdash; Esri, HERE, Garmin, FAO, NOAA, USGS, &copy; OpenStreetMap contributors, and the GIS User Community</p>
     <p class="cmp-hint" id="data-fetched-display" style="display:none;margin-top:6px;"></p>
   </div>
 
@@ -220,19 +222,25 @@
 
   <div class="card">
     <div class="card-title">🔆 System Configurations</div>
-    <p class="sys-note">Every run tests every combination of PV size × battery size, so you can compare them directly.</p>
-    <div class="fields">
-      <div class="field">
-        <label>PV sizes to simulate (W)</label>
-        <input type="text" id="pv-sizes" value="240,400,560,720,880">
-        <span class="hint">Comma-separated, e.g. 350,700,1050</span>
-      </div>
-      <div class="field">
-        <label>Battery sizes to simulate (Wh)</label>
-        <input type="text" id="batt-sizes" value="390,510,630,720,810">
-        <span class="hint">Comma-separated, e.g. 1000,2000,3000</span>
-      </div>
+    <p class="sys-note">Every combination of PV size × battery size in the ranges below is
+      simulated, so you can compare them directly.</p>
+
+    <p class="range-heading">PV array size (W)</p>
+    <div class="fields fields-3">
+      <div class="field"><label>Minimum</label><input type="number" id="pv-min" value="200" min="1" step="50"></div>
+      <div class="field"><label>Maximum</label><input type="number" id="pv-max" value="900" min="1" step="50"></div>
+      <div class="field"><label>Interval</label><input type="number" id="pv-int" value="100" min="1" step="50"></div>
     </div>
+
+    <p class="range-heading">Battery size (Wh)</p>
+    <div class="fields fields-3">
+      <div class="field"><label>Minimum</label><input type="number" id="batt-min" value="300" min="1" step="100"></div>
+      <div class="field"><label>Maximum</label><input type="number" id="batt-max" value="1500" min="1" step="100"></div>
+      <div class="field"><label>Interval</label><input type="number" id="batt-int" value="100" min="1" step="100"></div>
+    </div>
+
+    <input type="hidden" id="pv-sizes">
+    <input type="hidden" id="batt-sizes">
     <p class="cmp-hint" id="combo-preview" style="margin-top:14px;"></p>
   </div>
 
@@ -243,9 +251,17 @@
 
   <div id="results">
     <div class="card">
-      <div class="card-title">📉 Cost vs. Unmet kWh/Year</div>
-      <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 396" style="width:100%;height:auto;min-width:480px;"></svg></div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">
+        <span>📉 Cost vs. Unmet kWh/Year</span>
+        <label style="display:flex;align-items:center;gap:8px;">
+          <span>Show ≥</span>
+          <input type="number" id="scatter-met-floor" class="metric-select" min="0" max="100" step="1" placeholder="0" style="width:64px;text-align:right;">
+          <span>% load met</span>
+        </label>
+      </div>
+      <div class="cal-wrap"><svg id="unmet-kwh-scatter-chart" viewBox="0 0 640 418" style="width:100%;height:auto;min-width:480px;"></svg></div>
       <p class="cmp-hint">Each dot is one PV/battery configuration. Green dots have no other config that's both cheaper and lower in unmet kWh; gray dots are dominated by at least one such config. Click a dot to highlight the same configuration in the tables below.</p>
+      <p class="cmp-hint" id="scatter-filter-note" style="margin-top:6px;" hidden></p>
     </div>
     <div class="card">
       <div class="card-title">🏆 Cost Frontier</div>
@@ -256,11 +272,11 @@
       <div class="card-title">📅 Day-by-Day Calendar — <span id="cal-label"></span></div>
       <div class="cal-wrap"><div class="cal-grid" id="cal-grid"></div></div>
       <div class="cal-legend">
-        <span class="leg-green">0% unmet</span>
-        <span class="leg-lightgreen">&lt;5% unmet</span>
-        <span class="leg-yellow">5–25% unmet</span>
-        <span class="leg-orange">25–50% unmet</span>
-        <span class="leg-red">&gt;50% unmet</span>
+        <span class="leg-green">100% met</span>
+        <span class="leg-lightgreen">&gt;95% met</span>
+        <span class="leg-yellow">75–95% met</span>
+        <span class="leg-orange">50–75% met</span>
+        <span class="leg-red">&lt;50% met</span>
       </div>
     </div>
     <div class="card">
@@ -269,7 +285,7 @@
         <select id="matrix-metric" class="metric-select">
           <option value="cost">Total Cost</option>
           <option value="unmet-kwh">Unmet kWh/yr</option>
-          <option value="unmet-pct">Unmet %</option>
+          <option value="load-met-pct">Load met %</option>
         </select>
       </div>
       <div style="overflow-x:auto"><table class="mtbl matrix-tbl" id="combo-matrix"></table></div>
@@ -344,20 +360,6 @@
   </div>
 </div>
 
-<div id="load-change-modal" class="modal-overlay" style="display:none;">
-  <div class="modal-card" style="max-width:420px;">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
-      <div class="card-title" style="margin-bottom:0;">⚡ Scenario changed</div>
-      <button class="modal-close" id="load-change-modal-close" type="button">&times;</button>
-    </div>
-    <p class="cmp-hint" style="margin:0;">Your load or location changed since these sizes were set. Keep your current PV and battery sizes, or have the app suggest a fresh spread from your load?</p>
-    <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
-      <button class="csv-btn" id="load-change-modal-keep" type="button">Keep existing</button>
-      <button class="csv-btn tip" id="load-change-modal-recommend" type="button" data-tip="These are just a first cut. Use the tables in the Results to finetune the list of configurations.">Recommend sizes</button>
-    </div>
-  </div>
-</div>
-
 <div id="year-picker-modal" class="modal-overlay" style="display:none;">
   <div class="modal-card" style="max-width:420px;">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
@@ -375,7 +377,7 @@
       <div class="card-title" style="margin-bottom:0;" id="histogram-title">📊 Unmet Energy Distribution</div>
       <button class="modal-close" id="histogram-close" type="button">&times;</button>
     </div>
-    <div class="cal-wrap"><svg id="histogram-chart" viewBox="0 0 640 380" style="width:100%;height:auto;min-width:320px;"></svg></div>
+    <div class="cal-wrap"><svg id="histogram-chart" viewBox="0 0 640 404" style="width:100%;height:auto;min-width:320px;"></svg></div>
     <p class="cmp-hint" id="histogram-hint">Each bar is a range of daily unmet energy; height is the number of days that fell in that range.</p>
   </div>
 </div>
@@ -424,7 +426,7 @@ let placeSearchCoords = null;
 const CONFIG_STORAGE_KEY = 'solarSimConfig';
 // report-name is deliberately NOT here — it's per-export, not a saved setting, so it must
 // not persist across reloads or leak from one report into the next.
-const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed'];
+const CONFIG_FIELD_IDS = ['lat','lon','place-search','day-load','night-load','pv-min','pv-max','pv-int','batt-min','batt-max','batt-int','cost-pv-w','cost-batt-kwh','cost-fixed'];
 (function restoreSavedConfig(){
   let saved;
   try{ saved = JSON.parse(localStorage.getItem(CONFIG_STORAGE_KEY) || '{}'); }catch(e){ saved = {}; }
@@ -452,7 +454,7 @@ CONFIG_FIELD_IDS.forEach(id=>{
 /* ── Disallow negative numbers in every magnitude-only numeric input (cost/load fields —
    Lat/Long are excluded since negative is a legitimate hemisphere). Clamps to 0 the moment
    a negative value is fully typed, rather than only rejecting it on Run. ── */
-const NON_NEGATIVE_INPUT_IDS = ['cost-pv-w','cost-batt-kwh','cost-fixed','day-load','night-load'];
+const NON_NEGATIVE_INPUT_IDS = ['cost-pv-w','cost-batt-kwh','cost-fixed','day-load','night-load','pv-min','pv-max','pv-int','batt-min','batt-max','batt-int'];
 NON_NEGATIVE_INPUT_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('input', ()=>{
@@ -575,8 +577,7 @@ function renderMap(){
       if(ty < 0 || ty >= numTiles) continue;
       const wrappedX = ((tx % numTiles) + numTiles) % numTiles;
       const left = tx * TILE_SIZE - originX, top = ty * TILE_SIZE - originY;
-      const sub = 'abc'[Math.abs(tx + ty) % 3];
-      html += `<img src="https://${sub}.tile.openstreetmap.org/${mapZoom}/${wrappedX}/${ty}.png" style="position:absolute;left:${left}px;top:${top}px;width:${TILE_SIZE}px;height:${TILE_SIZE}px;" draggable="false" alt="">`;
+      html += `<img src="https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/${mapZoom}/${ty}/${wrappedX}" style="position:absolute;left:${left}px;top:${top}px;width:${TILE_SIZE}px;height:${TILE_SIZE}px;" draggable="false" alt="">`;
     }
   }
   tilesEl.innerHTML = html;
@@ -690,90 +691,53 @@ document.getElementById('place-search').addEventListener('keydown', e=>{
   if(e.key === 'Enter'){ e.preventDefault(); searchPlaceName(); }
 });
 
-/* ── Parse a comma-separated list of positive numbers ── */
-function parseSizeList(str, label){
-  const nums = str.split(',').map(s=>s.trim()).filter(Boolean).map(Number);
-  if(!nums.length) throw new Error(`Please enter at least one value for ${label}.`);
-  if(nums.some(n=>isNaN(n)||n<=0)) throw new Error(`${label} must be a comma-separated list of positive numbers (e.g. 1,2,3).`);
-  return [...new Set(nums)].sort((a,b)=>a-b);
+/* ── PV × battery search grid ────────────────────────────────────────────────────────
+   The grid is a straight min → max sweep on each axis at the user's interval: every
+   PV size crossed with every battery size, all simulated. `parseRange()` reads one
+   axis's three inputs, validates them, and returns the sorted list of sizes. ── */
+const MAX_RANGE_VALUES = 120;   // per axis — keeps the grid (and the UI) manageable
+
+function parseRange(minId, maxId, intId, label){
+  const lo   = parseFloat(document.getElementById(minId).value);
+  const hi   = parseFloat(document.getElementById(maxId).value);
+  const step = parseFloat(document.getElementById(intId).value);
+  if([lo, hi, step].some(n => isNaN(n))) throw new Error(`Fill in the ${label} minimum, maximum, and interval.`);
+  if(lo <= 0)   throw new Error(`${label} minimum must be greater than 0.`);
+  if(hi < lo)   throw new Error(`${label} maximum must be at least the minimum.`);
+  if(step <= 0) throw new Error(`${label} interval must be greater than 0.`);
+  if((hi - lo) / step + 1 > MAX_RANGE_VALUES)
+    throw new Error(`That ${label} range has more than ${MAX_RANGE_VALUES} sizes — use a larger interval.`);
+  const vals = [];
+  for(let v = lo; v <= hi + 1e-9; v += step) vals.push(Math.round(v));
+  return [...new Set(vals)];
 }
 
 function updateComboPreview(){
   const el = document.getElementById('combo-preview');
+  el.style.color = '';
   try{
-    const pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
-    const battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
-    const combos = [];
-    for(const pv of pvSizes) for(const batt of battSizes) combos.push(`${pv}W/${batt}Wh`);
-    el.textContent = `Will test ${combos.length} combination${combos.length===1?'':'s'}`;
-    el.style.color = '';
+    const pv = parseRange('pv-min', 'pv-max', 'pv-int', 'PV');
+    const bt = parseRange('batt-min', 'batt-max', 'batt-int', 'battery');
+    const n = pv.length * bt.length;
+    el.textContent = `Will simulate ${n} combination${n===1?'':'s'} — ${pv.length} PV size${pv.length===1?'':'s'} × ${bt.length} battery size${bt.length===1?'':'s'}.`;
   }catch(e){
     el.textContent = e.message;
     el.style.color = '#E74C3C';
   }
 }
-['pv-sizes','batt-sizes'].forEach(id=>document.getElementById(id).addEventListener('input', updateComboPreview));
+['pv-min','pv-max','pv-int','batt-min','batt-max','batt-int'].forEach(id =>
+  document.getElementById(id).addEventListener('input', updateComboPreview));
 updateComboPreview();
 
-/* ── Recommended PV/battery sizes derived from the current day+night load ── */
-function computeRecommendedSizes(dayWh, nightWh){
-  const total = dayWh + nightWh;
-  const pv = [0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.2].map(m => Math.round(m*total));
-  const batt = [0.9, 1.3, 1.7, 2.1, 2.4, 2.7, 3.1, 3.4].map(m => Math.round(m*nightWh));
-  return {pv, batt};
-}
-
-/* ── Gate in front of every simulation attempt: if the scenario (load or location) changed
-   since the sizes were last confirmed, ask before running anything. The modal resolves back
-   into continueSimulation(), which re-checks and either shows the modal again or (once clear)
-   runs performSimulation() with the opts the original attempt was made with. Choosing "Keep
-   existing" just clears the flag; the fresh PVGIS fetch for a new location happens in
-   performSimulation() either way. ── */
-let scenarioNeedsReview = false;
 let pendingSimOpts = null;
 let simRunning = false;
-['day-load','night-load','lat','lon'].forEach(id=>document.getElementById(id).addEventListener('input', ()=>{ scenarioNeedsReview = true; }));
 
 function continueSimulation(){
-  if(scenarioNeedsReview){
-    document.getElementById('load-change-modal').style.display = 'flex';
-    return;
-  }
   const opts = pendingSimOpts;
   pendingSimOpts = null;
   if(opts) performSimulation(opts).finally(()=>{ simRunning = false; });
   else simRunning = false;
 }
-
-function closeLoadChangeModal(){
-  document.getElementById('load-change-modal').style.display = 'none';
-  pendingSimOpts = null;
-  simRunning = false;
-}
-document.getElementById('load-change-modal-close').addEventListener('click', closeLoadChangeModal);
-document.getElementById('load-change-modal').addEventListener('click', e=>{
-  if(e.target.id==='load-change-modal') closeLoadChangeModal();
-});
-document.getElementById('load-change-modal-keep').addEventListener('click', ()=>{
-  scenarioNeedsReview = false;
-  document.getElementById('load-change-modal').style.display = 'none';
-  continueSimulation();
-});
-document.getElementById('load-change-modal-recommend').addEventListener('click', ()=>{
-  const dayWh = parseFloat(document.getElementById('day-load').value);
-  const nightWh = parseFloat(document.getElementById('night-load').value);
-  if(!isNaN(dayWh) && !isNaN(nightWh)){
-    const {pv, batt} = computeRecommendedSizes(dayWh, nightWh);
-    const pvEl = document.getElementById('pv-sizes'), battEl = document.getElementById('batt-sizes');
-    pvEl.value = pv.join(',');
-    battEl.value = batt.join(',');
-    pvEl.dispatchEvent(new Event('input', {bubbles:true}));
-    battEl.dispatchEvent(new Event('input', {bubbles:true}));
-  }
-  scenarioNeedsReview = false;
-  document.getElementById('load-change-modal').style.display = 'none';
-  continueSimulation();
-});
 
 const setSt=(msg,{spinner=true}={})=>{const e=document.getElementById('status');e.style.display=msg?'block':'none';e.innerHTML=msg?`${spinner?'<span class="spinner"></span>':''}${msg}`:'';}
 const setErr=(msg)=>{const e=document.getElementById('error-msg');e.style.display=msg?'block':'none';e.innerHTML=msg||'';}
@@ -1007,10 +971,11 @@ function exportHourlyCSV(run){
 
 /* ── Histogram: days by daily unmet energy (kWh), for one config ── */
 function showUnmetKwhHistogram(run){
-  const W=640, H=380, M={l:56,r:20,t:20,b:56};
+  const W=640, H=404, M={l:56,r:20,t:20,b:80};
   const plotW=W-M.l-M.r, plotH=H-M.t-M.b;
 
   const dailyTotalWh = run.dayWh+run.nightWh;
+  const dailyTotalKwh = dailyTotalWh/1000;
   const dailyKwh = run.results.map(r => (1-r.frac)*dailyTotalWh/1000);
 
   const BIN_COUNT=10, BIN_START=0.001;
@@ -1039,7 +1004,8 @@ function showUnmetKwhHistogram(run){
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-6}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Daily unmet energy (kWh)</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${M.t+plotH+52}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Daily unmet energy (kWh)</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${M.t+plotH+68}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Grotesk',sans-serif">% of daily load met</text>`;
   svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Days</text>`;
 
   bins.forEach((count,i)=>{
@@ -1047,13 +1013,16 @@ function showUnmetKwhHistogram(run){
     const y = yScale(count);
     const h = M.t+plotH-y;
     const lo = (BIN_START+i*BIN_WIDTH).toFixed(2), hi = (BIN_START+(i+1)*BIN_WIDTH).toFixed(2);
+    // % met is derived from the displayed (rounded) kWh bound so the two label rows line up exactly
+    const loMetPct = dailyTotalKwh>0 ? (100 - (+lo)/dailyTotalKwh*100) : 100;
     svg += `<rect class="hist-bar" x="${x}" y="${y}" width="${barW}" height="${h}" fill="var(--sun)" fill-opacity=".85"><title>${lo}–${hi} kWh: ${count} day${count===1?'':'s'}</title></rect>`;
     if(count>0) svg += `<text x="${x+barW/2}" y="${y-6}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.72)" font-family="'Space Mono',monospace">${count}</text>`;
     svg += `<text x="${x+barW/2}" y="${M.t+plotH+16}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.61)" font-family="'Space Mono',monospace">${lo}</text>`;
+    svg += `<text x="${x+barW/2}" y="${M.t+plotH+30}" text-anchor="middle" font-size="11" fill="rgba(255,255,255,.42)" font-family="'Space Mono',monospace">${formatLoadMetPct(loMetPct)}</text>`;
   });
 
   document.getElementById('histogram-title').textContent = `🔻 Daily Unmet Energy — ${run.pv} W / ${run.batt} Wh`;
-  document.getElementById('histogram-hint').textContent = 'Each bar is a range of daily unmet energy in kWh; height is the number of days that fell in that range. Label is the lower bound of the bin. Days with zero unmet energy are ignored.';
+  document.getElementById('histogram-hint').textContent = "Each bar is a range of daily unmet energy in kWh; height is the number of days that fell in that range. Labels under each bar are the bin's lower bound — in kWh unmet and as the matching % of that day's load met. Days with zero unmet energy are ignored.";
   document.getElementById('histogram-chart').innerHTML = svg;
   document.getElementById('histogram-modal').style.display = 'flex';
 }
@@ -1070,10 +1039,10 @@ document.getElementById('histogram-close').addEventListener('click', ()=>{ docum
 document.getElementById('histogram-modal').addEventListener('click', e=>{
   if(e.target.id==='histogram-modal') document.getElementById('histogram-modal').style.display='none';
 });
-function showDayDetail(dateLabel, unmetKwh, unmetPct){
+function showDayDetail(dateLabel, unmetKwh, metPct){
   document.getElementById('day-detail-title').textContent = `📅 ${dateLabel}`;
   document.getElementById('day-detail-body').textContent =
-    `${unmetKwh.toFixed(2)} kWh unmet (${unmetPct.toFixed(2)}% of that day's load)`;
+    `${unmetKwh.toFixed(2)} kWh unmet (${formatLoadMetPct(metPct)} of that day's load met)`;
   document.getElementById('day-detail-modal').style.display = 'flex';
 }
 document.getElementById('day-detail-modal-close').addEventListener('click', ()=>{ document.getElementById('day-detail-modal').style.display='none'; });
@@ -1112,9 +1081,15 @@ function formatUnmetKwh(v){
   return v<0.1 ? v.toFixed(2) : v.toFixed(1);
 }
 
-/* ── Format unmet %/year: same adaptive-decimal rule as formatUnmetKwh ── */
-function formatUnmetPct(v){
-  return (v<0.1 ? v.toFixed(2) : v.toFixed(1))+'%';
+/* ── Share of the year's total load that is actually met, as a %, for one config ── */
+function computeLoadMetPct(run){
+  return 100 - computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100;
+}
+
+/* ── Format a "% of load met" value: one decimal until it exceeds 99.9%, then two —
+   mirrors formatUnmetKwh's extra-precision-near-the-floor rule, applied at the ceiling ── */
+function formatLoadMetPct(v){
+  return (v>99.9 ? v.toFixed(2) : v.toFixed(1))+'%';
 }
 
 /* ── Measure rendered text width (via an offscreen canvas) so chart margins can grow to
@@ -1146,7 +1121,7 @@ function renderFrontierTable(){
     .sort((a,b)=> b.run.cost-a.run.cost);
 
   const tbl = document.getElementById('frontier-tbl');
-  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Unmet %</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Load met %</th><th>Marginal $/kWh</th></tr></thead><tbody>`+
     rows.map((e,k)=>{
       const {run,i,unmetKwh} = e;
       const next = rows[k+1];
@@ -1157,7 +1132,7 @@ function renderFrontierTable(){
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
-        <td style="font-family:'Space Mono',monospace">${formatUnmetPct(unmetKwh/computeAnnualLoadKwh(run)*100)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatLoadMetPct(computeLoadMetPct(run))}</td>
         <td style="font-family:'Space Mono',monospace">${marginal===null ? '—' : '$'+marginal.toFixed(2)}</td>
       </tr>`;
     }).join('') + '</tbody>';
@@ -1178,7 +1153,7 @@ function renderFrontierTable(){
 function renderComparison(){
   const isFrontier = computeFrontier(allRuns.map(run=>computeTotalUnmetKwh(run)), allRuns.map(run=>run.cost));
   const tbl = document.getElementById('cmp-tbl');
-  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Unmet %</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
+  tbl.innerHTML = `<thead><tr><th>Total Cost</th><th>PV</th><th>Battery</th><th>Unmet kWh/yr</th><th>Load met %</th><th>Days @ min SOC</th><th>Days @ 100% SOC</th><th>Data</th></tr></thead><tbody>`+
     allRuns.map((run,i)=>{
       const soc = computeSocExtremeDays(run);
       const unmetKwh = computeTotalUnmetKwh(run);
@@ -1188,7 +1163,7 @@ function renderComparison(){
         <td style="font-family:'Space Mono',monospace">${run.pv} W</td>
         <td style="font-family:'Space Mono',monospace">${run.batt} Wh</td>
         <td style="font-family:'Space Mono',monospace">${formatUnmetKwh(unmetKwh)}</td>
-        <td style="font-family:'Space Mono',monospace">${formatUnmetPct(unmetKwh/computeAnnualLoadKwh(run)*100)}</td>
+        <td style="font-family:'Space Mono',monospace">${formatLoadMetPct(computeLoadMetPct(run))}</td>
         <td>${soc.atMin}</td>
         <td>${soc.atMax}</td>
         <td><div style="display:flex;gap:6px;"><button class="csv-btn" data-idx="${i}" type="button">⬇ CSV</button><button class="csv-btn unmet-kwh-hist-btn" data-idx="${i}" type="button">🔻 Unmet kWh</button></div></td>
@@ -1231,10 +1206,10 @@ const MATRIX_METRICS = {
     label: v => formatUnmetKwh(v)+' kWh',
     hint: 'Unmet load per year. Click a cell to highlight the same configuration in the tables above and below.'
   },
-  'unmet-pct': {
-    value: run => computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100,
-    label: formatUnmetPct,
-    hint: "Unmet load per year as a percentage of that config's total annual load. Click a cell to highlight the same configuration in the tables above and below."
+  'load-met-pct': {
+    value: run => computeLoadMetPct(run),
+    label: formatLoadMetPct,
+    hint: "Share of that config's total annual load that is actually met. Click a cell to highlight the same configuration in the tables above and below."
   }
 };
 
@@ -1280,19 +1255,49 @@ function renderMatrix(){
 }
 document.getElementById('matrix-metric').addEventListener('change', renderMatrix);
 
+/* ── The scatter has two x/y truncations:
+   • x-axis — hide configs below the "% of load met" floor typed in the chart header
+     (`#scatter-met-floor`); blank / out of range ⇒ no truncation.
+   • y-axis — always cap cost at the SCATTER_RELIABLE_CAP-th cheapest 100%-reliable
+     system, so only that many reliable systems (which all sit at unmet = 0) stay in
+     view. No cap when fewer than that many configs reach 100%. ── */
+const SCATTER_RELIABLE_CAP = 2;
+function scatterMetFloor(){
+  const v = parseFloat(document.getElementById('scatter-met-floor').value);
+  return (isNaN(v) || v <= 0) ? null : Math.min(v, 100);
+}
+function scatterUnmetCutoff(annualLoadKwh){
+  const floor = scatterMetFloor();
+  return floor==null ? Infinity : Math.max(0, annualLoadKwh*(1 - floor/100));
+}
+/* Cost of the SCATTER_RELIABLE_CAP-th cheapest 100%-reliable config — configs above it
+   are hidden. Infinity ⇒ no cap (fewer than that many configs reach 100%). */
+function scatterCostCutoff(unmetKwhByIdx){
+  const reliableCosts = allRuns.filter((_,i)=> unmetKwhByIdx[i] <= 1e-9)
+    .map(r=>r.cost).sort((a,b)=>a-b);
+  return SCATTER_RELIABLE_CAP < reliableCosts.length ? reliableCosts[SCATTER_RELIABLE_CAP-1] : Infinity;
+}
+
 /* ── Render: cost vs. unmet-kWh/year scatter plot ── */
 function renderUnmetKwhScatter(){
-  const W=640, H=396;
-  const M={l:64,r:20,t:20,b:66};
+  const W=640, H=418;
+  const M={l:64,r:20,t:20,b:88};
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
   const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
-  const xs = unmetKwhByIdx;
-  const ys = allRuns.map(run=>run.cost);
+  const xCutoff = scatterUnmetCutoff(annualLoadKwh);
+  const costCutoff = scatterCostCutoff(unmetKwhByIdx);
+  const inView = i => unmetKwhByIdx[i] <= xCutoff + 1e-9 && allRuns[i].cost <= costCutoff + 1e-9;
+  const shown = allRuns.filter((_,i)=> inView(i));
+  // If the filters hide everything, keep the axes scaled to the full set (no dots draw).
+  const scaleSet = shown.length ? shown : allRuns;
+
+  const xs = scaleSet.map(run=>computeTotalUnmetKwh(run));
+  const ys = scaleSet.map(run=>run.cost);
   const xMaxRaw = Math.max(...xs);
-  const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
+  const xMax = Math.max(0.001, Math.min(xMaxRaw>0 ? xMaxRaw*1.15 : 1, xCutoff));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
@@ -1314,10 +1319,10 @@ function renderUnmetKwhScatter(){
   let svg = '';
   xTicks.forEach(t=>{
     const x=xScale(t);
-    const pct = annualLoadKwh>0 ? (t/annualLoadKwh*100) : 0;
+    const metPct = annualLoadKwh>0 ? (100 - t/annualLoadKwh*100) : 100;
     svg += `<line x1="${x}" y1="${M.t}" x2="${x}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.06)"/>`;
     svg += `<text x="${x}" y="${M.t+plotH+18}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.64)" font-family="'Space Mono',monospace">${t.toFixed(1)}</text>`;
-    svg += `<text x="${x}" y="${M.t+plotH+31}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Mono',monospace">${pct.toFixed(2)}%</text>`;
+    svg += `<text x="${x}" y="${M.t+plotH+31}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Mono',monospace">${formatLoadMetPct(metPct)}</text>`;
   });
   yTicks.forEach(t=>{
     const y=yScale(t);
@@ -1326,18 +1331,22 @@ function renderUnmetKwhScatter(){
   });
   svg += `<line x1="${M.l}" y1="${M.t}" x2="${M.l}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
   svg += `<line x1="${M.l}" y1="${M.t+plotH}" x2="${M.l+plotW}" y2="${M.t+plotH}" stroke="rgba(255,255,255,.2)"/>`;
-  svg += `<text x="${M.l+plotW/2}" y="${H-8}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Unmet kWh / year</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${M.t+plotH+52}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif">Unmet kWh / year</text>`;
+  svg += `<text x="${M.l+plotW/2}" y="${M.t+plotH+68}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Grotesk',sans-serif">% of load met</text>`;
   svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
-  allRuns.forEach((run,i)=>{
-    const unmetKwh = unmetKwhByIdx[i];
+  const dotSvg = i => {
+    const run = allRuns[i], unmetKwh = unmetKwhByIdx[i];
     const cx=xScale(unmetKwh), cy=yScale(run.cost);
     const fill = isFrontier[i] ? 'var(--good)' : 'var(--muted)';
     const isActive = i===activeCfgIdx;
     const r = isActive?6:4;
     const frontierNote = isFrontier[i] ? ' (no cheaper system has lower unmet kWh, and no lower-unmet-kWh system is cheaper)' : '';
-    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${formatUnmetKwh(unmetKwh)} unmet kWh/yr, $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
-  });
+    return `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${formatLoadMetPct(computeLoadMetPct(run))} of load met (${formatUnmetKwh(unmetKwh)} kWh/yr unmet), $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
+  };
+  // Draw non-frontier (gray) dots first, then frontier (green) dots, so green always sits on top.
+  allRuns.forEach((run,i)=>{ if(inView(i) && !isFrontier[i]) svg += dotSvg(i); });
+  allRuns.forEach((run,i)=>{ if(inView(i) && isFrontier[i]) svg += dotSvg(i); });
 
   const svgEl = document.getElementById('unmet-kwh-scatter-chart');
   svgEl.innerHTML = svg;
@@ -1351,9 +1360,23 @@ function renderUnmetKwhScatter(){
       renderCalendar();
     });
   });
-}
 
-/* ── Render: day-by-day calendar for the highlighted config, colored by % of load unmet ── */
+  const floor = scatterMetFloor();
+  const parts = [];
+  if(floor != null) parts.push(`x-axis truncated at ${formatLoadMetPct(floor)} of load met`);
+  if(costCutoff !== Infinity) parts.push(`y-axis capped at the ${SCATTER_RELIABLE_CAP} cheapest 100%-reliable systems ($${Math.round(costCutoff).toLocaleString()})`);
+  const noteEl = document.getElementById('scatter-filter-note');
+  if(!parts.length){
+    noteEl.hidden = true;
+  }else{
+    noteEl.hidden = false;
+    const clearHint = floor != null ? ` Clear the field to lift the x-axis truncation.` : '';
+    noteEl.textContent = `${parts.join('; ')} — showing ${shown.length} of ${allRuns.length} configuration${allRuns.length===1?'':'s'}.${clearHint}`;
+  }
+}
+document.getElementById('scatter-met-floor').addEventListener('input', ()=>{ if(allRuns && allRuns.length) renderUnmetKwhScatter(); });
+
+/* ── Render: day-by-day calendar for the highlighted config, colored by % of load met ── */
 function renderCalendar(){
   const run = allRuns[activeCfgIdx];
   const {pv, batt, results, year} = run;
@@ -1375,11 +1398,12 @@ function renderCalendar(){
       if(d<dim[m]){
         const r = results[ri++];
         const unmetPct = (1-r.frac)*100;
+        const metPct = r.frac*100;
         const unmetKwh = (1-r.frac)*dailyTotalWh/1000;
         const lvl = unmetPct<=1e-9 ? 'green' : unmetPct<5 ? 'lightgreen' : unmetPct<25 ? 'yellow' : unmetPct<=50 ? 'orange' : 'red';
         const dateLabel = `${MONTHS[m]} ${d+1}`;
-        const cell = mkDiv('cal-cell '+lvl, '', `${dateLabel}: ${unmetKwh.toFixed(2)} kWh unmet (${unmetPct.toFixed(2)}%)`);
-        cell.addEventListener('click', ()=> showDayDetail(dateLabel, unmetKwh, unmetPct));
+        const cell = mkDiv('cal-cell '+lvl, '', `${dateLabel}: ${unmetKwh.toFixed(2)} kWh unmet (${formatLoadMetPct(metPct)} of load met)`);
+        cell.addEventListener('click', ()=> showDayDetail(dateLabel, unmetKwh, metPct));
         cal.appendChild(cell);
       } else cal.appendChild(mkDiv('cal-cell empty'));
     }
@@ -1388,17 +1412,25 @@ function renderCalendar(){
 
 /* ── Report: light-theme redraw of the Cost vs. Unmet kWh/Year scatter onto a canvas (for the Word export) ── */
 function buildReportUnmetKwhScatterCanvas(){
-  const W=900, H=476;
-  const M={l:80,r:30,t:30,b:76};
+  const W=900, H=500;
+  const M={l:80,r:30,t:30,b:100};
 
   const unmetKwhByIdx = allRuns.map(run=>computeTotalUnmetKwh(run));
   const isFrontier = computeFrontier(unmetKwhByIdx, allRuns.map(run=>run.cost));
   const annualLoadKwh = computeAnnualLoadKwh(allRuns[0]);
 
-  const xs = unmetKwhByIdx;
-  const ys = allRuns.map(run=>run.cost);
+  // Match the on-screen scatter's optional x-axis (% of load met) and y-axis
+  // (Nth-cheapest reliable) truncations.
+  const xCutoff = scatterUnmetCutoff(annualLoadKwh);
+  const costCutoff = scatterCostCutoff(unmetKwhByIdx);
+  const inView = i => unmetKwhByIdx[i] <= xCutoff + 1e-9 && allRuns[i].cost <= costCutoff + 1e-9;
+  const scaleSet = allRuns.filter((_,i)=> inView(i));
+  const shown = scaleSet.length ? scaleSet : allRuns;
+
+  const xs = shown.map(run=>computeTotalUnmetKwh(run));
+  const ys = shown.map(run=>run.cost);
   const xMaxRaw = Math.max(...xs);
-  const xMax = xMaxRaw>0 ? xMaxRaw*1.15 : 1;
+  const xMax = Math.max(0.001, Math.min(xMaxRaw>0 ? xMaxRaw*1.15 : 1, xCutoff));
   const yMinRaw = Math.min(...ys), yMaxRaw = Math.max(...ys);
   const yPad = Math.max((yMaxRaw-yMinRaw)*0.12, yMaxRaw*0.05, 20);
   const yLo = Math.max(0, Math.floor(yMinRaw-yPad));
@@ -1423,10 +1455,10 @@ function buildReportUnmetKwhScatterCanvas(){
   const xTicks=[]; for(let i=0;i<=5;i++) xTicks.push(xMax*i/5);
   xTicks.forEach(t=>{
     const x=xScale(t);
-    const pct = annualLoadKwh>0 ? (t/annualLoadKwh*100) : 0;
+    const metPct = annualLoadKwh>0 ? (100 - t/annualLoadKwh*100) : 100;
     ctx.strokeStyle='#dddddd'; ctx.beginPath(); ctx.moveTo(x,M.t); ctx.lineTo(x,M.t+plotH); ctx.stroke();
     ctx.fillStyle='#666666'; ctx.textAlign='center'; ctx.fillText(t.toFixed(1), x, M.t+plotH+20);
-    ctx.fillStyle='#999999'; ctx.fillText(pct.toFixed(2)+'%', x, M.t+plotH+35);
+    ctx.fillStyle='#999999'; ctx.fillText(formatLoadMetPct(metPct), x, M.t+plotH+35);
   });
   yTicks.forEach(t=>{
     const y=yScale(t);
@@ -1437,20 +1469,26 @@ function buildReportUnmetKwhScatterCanvas(){
   ctx.beginPath(); ctx.moveTo(M.l,M.t); ctx.lineTo(M.l,M.t+plotH); ctx.lineTo(M.l+plotW,M.t+plotH); ctx.stroke();
 
   ctx.fillStyle='#333333'; ctx.textAlign='center'; ctx.font='13px Arial';
-  ctx.fillText('Unmet kWh / year', M.l+plotW/2, H-14);
+  ctx.fillText('Unmet kWh / year', M.l+plotW/2, M.t+plotH+58);
+  ctx.fillStyle='#999999'; ctx.font='12px Arial';
+  ctx.fillText('% of load met', M.l+plotW/2, M.t+plotH+76);
   ctx.save();
   ctx.translate(20, M.t+plotH/2); ctx.rotate(-Math.PI/2);
   ctx.fillText('Total cost ($)', 0, 0);
   ctx.restore();
 
-  allRuns.forEach((run,i)=>{
+  const drawDot = i => {
+    const run = allRuns[i];
     const cx=xScale(unmetKwhByIdx[i]), cy=yScale(run.cost);
     const fill = isFrontier[i] ? '#27AE60' : '#8A94A3';
     const isActive = i===activeCfgIdx;
     ctx.beginPath(); ctx.arc(cx,cy,isActive?8:6,0,Math.PI*2);
     ctx.fillStyle=fill; ctx.fill();
     if(isActive){ ctx.lineWidth=2.5; ctx.strokeStyle='#F5A623'; ctx.stroke(); }
-  });
+  };
+  // Draw non-frontier (gray) dots first, then frontier (green) dots, so green always sits on top.
+  allRuns.forEach((run,i)=>{ if(inView(i) && !isFrontier[i]) drawDot(i); });
+  allRuns.forEach((run,i)=>{ if(inView(i) && isFrontier[i]) drawDot(i); });
 
   return canvas;
 }
@@ -1494,7 +1532,7 @@ function buildReportCalendarCanvas(run){
     }
   }
 
-  const legend = [['#27AE60','0% unmet'],['#F1C40F','<25% unmet'],['#E67E22','25–50% unmet'],['#C0392B','>50% unmet']];
+  const legend = [['#27AE60','100% met'],['#F1C40F','>75% met'],['#E67E22','50–75% met'],['#C0392B','<50% met']];
   let lx = M.l;
   const ly = gy + 12*cell + 26;
   ctx.font='11px Arial'; ctx.textAlign='left';
@@ -1589,7 +1627,7 @@ function downloadWordReport(){
     ['Battery size', `${activeRun.batt} Wh`],
     ['Total cost', `$${Math.round(activeRun.cost).toLocaleString()}`],
     ['Unmet kWh/year', formatUnmetKwh(activeUnmetKwh)],
-    ['Unmet %/year', formatUnmetPct(activeUnmetKwh / computeAnnualLoadKwh(activeRun) * 100)]
+    ['Load met %/year', formatLoadMetPct(computeLoadMetPct(activeRun))]
   ];
   let configRows = '';
   configFields.forEach(([label,val])=>{
@@ -1757,11 +1795,9 @@ async function performSimulation({scroll=true}={}){
 
   let pvSizes, battSizes;
   try{
-    pvSizes = parseSizeList(document.getElementById('pv-sizes').value, 'PV sizes');
-    battSizes = parseSizeList(document.getElementById('batt-sizes').value, 'battery sizes');
+    pvSizes   = parseRange('pv-min', 'pv-max', 'pv-int', 'PV');
+    battSizes = parseRange('batt-min', 'batt-max', 'batt-int', 'battery');
   }catch(e){ setErr(e.message); return; }
-  const CONFIGS = [];
-  for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
   let dataPromise;
   if(pvgisCache && pvgisCache.lat===lat && pvgisCache.lon===lon){
@@ -1776,6 +1812,11 @@ async function performSimulation({scroll=true}={}){
   const btn=document.getElementById('btn-run'); btn.disabled=true;
   try{
     const {year, hourly, meta, displayName, tilt, azimuth} = await dataPromise;
+
+    document.getElementById('pv-sizes').value = pvSizes.join(',');
+    document.getElementById('batt-sizes').value = battSizes.join(',');
+    const CONFIGS = [];
+    for(const pv of pvSizes) for(const batt of battSizes) CONFIGS.push({pv,batt});
 
     setSt(`Received ${hourly.length} hourly PV-output values. Simulating ${CONFIGS.length} configuration${CONFIGS.length===1?'':'s'}…`);
     await new Promise(r=>setTimeout(r,40));
@@ -1794,13 +1835,6 @@ async function performSimulation({scroll=true}={}){
     lastSimLat = lat; lastSimLon = lon; lastSimYear = year;
     updateLocationDriftWarning();
 
-    const unmetPcts = allRuns.map(run=> computeTotalUnmetKwh(run)/computeAnnualLoadKwh(run)*100);
-    if(!unmetPcts.some(p=>p>1)){
-      showSizeHint('Add smaller PV and battery sizes');
-    }else if(!unmetPcts.some(p=>p<1)){
-      showSizeHint('Add larger PV and battery sizes');
-    }
-
     setSt('');
     document.getElementById('results').style.display='block';
     renderFrontierTable();
@@ -1817,7 +1851,7 @@ async function performSimulation({scroll=true}={}){
 
 /* ── Hitting Enter in any input card, or clicking the Run Simulation button, runs the
    full simulation (fetching data first if needed) ── */
-const SIM_TRIGGER_FIELD_IDS = ['lat','lon','day-load','night-load','pv-sizes','batt-sizes','cost-pv-w','cost-batt-kwh','cost-fixed'];
+const SIM_TRIGGER_FIELD_IDS = ['lat','lon','day-load','night-load','pv-min','pv-max','pv-int','batt-min','batt-max','batt-int','cost-pv-w','cost-batt-kwh','cost-fixed'];
 SIM_TRIGGER_FIELD_IDS.forEach(id=>{
   const el = document.getElementById(id);
   if(el) el.addEventListener('keydown', e=>{

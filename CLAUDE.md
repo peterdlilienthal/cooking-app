@@ -89,13 +89,36 @@ worker is ever renamed or moved to a custom domain.
    a failure based on whether the unmet fraction of that day's total
    (day+night) load exceeds the user-set "acceptable unmet energy" tolerance
    (`unmet-tolerance` input, default 10%). Runs once per PV-size ×
-   battery-size combination (the cross product of the two comma-delimited
-   size-list inputs).
+   battery-size combination.
+   - **Search grid** (`parseRange()`) — the "System Configurations" card has
+     three inputs per axis: min, max, interval (`pv-min` / `pv-max` / `pv-int`,
+     `batt-min` / `batt-max` / `batt-int`). `parseRange()` validates one axis's
+     trio and returns the sorted list of sizes (`min`, `min+interval`, … ≤
+     `max`); `MAX_RANGE_VALUES` (120) caps each axis so the grid stays
+     renderable. `performSimulation()` crosses the two lists and simulates
+     every `{pv, batt}` — a plain sweep, no search heuristic. `updateComboPreview()`
+     shows the combination count live and surfaces validation errors from the
+     same `parseRange()`. The computed lists are still written into the hidden
+     `pv-sizes` / `batt-sizes` inputs so the report reads them unchanged; the
+     six range inputs are in `CONFIG_FIELD_IDS` (localStorage) and
+     `SIM_TRIGGER_FIELD_IDS` (Enter-to-run).
 5. **Rendering** — a comparison table, two PV×battery matrices (not-met days,
    total cost), a cost-vs-reliability scatter plot, and a detail view
    (calendar/monthly/verdict) for whichever config is currently selected.
    Selection state (`activeCfgIdx`) is shared across all of these — clicking
    any row/cell/dot re-renders all of them to stay in sync.
+   - **Scatter axis truncation** — the scatter x-axis is filtered by the
+     `#scatter-met-floor` input in the card header ("Show ≥ __ % load met"):
+     hides configs below that "% of load met" and rescales the x-axis (and its
+     `% of load met` tick labels) to end exactly at the floor; blank /
+     out-of-range ⇒ no x truncation. The y-axis is *always* capped at the
+     `SCATTER_RELIABLE_CAP`-th (2nd) cheapest 100%-reliable config's cost, so
+     only that many reliable systems (all at unmet = 0) stay in view and the
+     y-axis rescales to that band — no cap when fewer than that many configs
+     reach 100%. `scatterMetFloor()` / `scatterUnmetCutoff()` /
+     `scatterCostCutoff()` and the combined `inView(i)` predicate are shared by
+     `renderUnmetKwhScatter()` and the Word-report canvas so the export matches
+     the screen.
 
 ## Simulation model — known simplifications
 
