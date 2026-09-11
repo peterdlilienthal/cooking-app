@@ -1335,16 +1335,18 @@ function renderUnmetKwhScatter(){
   svg += `<text x="${M.l+plotW/2}" y="${M.t+plotH+68}" text-anchor="middle" font-size="12" fill="rgba(255,255,255,.44)" font-family="'Space Grotesk',sans-serif">% of load met</text>`;
   svg += `<text x="16" y="${M.t+plotH/2}" text-anchor="middle" font-size="13" fill="rgba(255,255,255,.67)" font-family="'Space Grotesk',sans-serif" transform="rotate(-90 16 ${M.t+plotH/2})">Total cost ($)</text>`;
 
-  allRuns.forEach((run,i)=>{
-    const unmetKwh = unmetKwhByIdx[i];
-    if(!inView(i)) return;   // hidden by the "% of load met" floor or the y-axis cap
+  const dotSvg = i => {
+    const run = allRuns[i], unmetKwh = unmetKwhByIdx[i];
     const cx=xScale(unmetKwh), cy=yScale(run.cost);
     const fill = isFrontier[i] ? 'var(--good)' : 'var(--muted)';
     const isActive = i===activeCfgIdx;
     const r = isActive?6:4;
     const frontierNote = isFrontier[i] ? ' (no cheaper system has lower unmet kWh, and no lower-unmet-kWh system is cheaper)' : '';
-    svg += `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${formatLoadMetPct(computeLoadMetPct(run))} of load met (${formatUnmetKwh(unmetKwh)} kWh/yr unmet), $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
-  });
+    return `<circle class="unmet-kwh-scatter-dot" data-idx="${i}" cx="${cx}" cy="${cy}" r="${r}" fill="${fill}" fill-opacity="${isActive?1:0.85}" stroke="${isActive?'var(--sun)':'none'}" stroke-width="${isActive?3:0}"><title>${run.pv} W / ${run.batt} Wh — ${formatLoadMetPct(computeLoadMetPct(run))} of load met (${formatUnmetKwh(unmetKwh)} kWh/yr unmet), $${Math.round(run.cost).toLocaleString()}${frontierNote}</title></circle>`;
+  };
+  // Draw non-frontier (gray) dots first, then frontier (green) dots, so green always sits on top.
+  allRuns.forEach((run,i)=>{ if(inView(i) && !isFrontier[i]) svg += dotSvg(i); });
+  allRuns.forEach((run,i)=>{ if(inView(i) && isFrontier[i]) svg += dotSvg(i); });
 
   const svgEl = document.getElementById('unmet-kwh-scatter-chart');
   svgEl.innerHTML = svg;
@@ -1475,15 +1477,18 @@ function buildReportUnmetKwhScatterCanvas(){
   ctx.fillText('Total cost ($)', 0, 0);
   ctx.restore();
 
-  allRuns.forEach((run,i)=>{
-    if(!inView(i)) return;   // hidden by the "% of load met" floor or the y-axis cap
+  const drawDot = i => {
+    const run = allRuns[i];
     const cx=xScale(unmetKwhByIdx[i]), cy=yScale(run.cost);
     const fill = isFrontier[i] ? '#27AE60' : '#8A94A3';
     const isActive = i===activeCfgIdx;
     ctx.beginPath(); ctx.arc(cx,cy,isActive?8:6,0,Math.PI*2);
     ctx.fillStyle=fill; ctx.fill();
     if(isActive){ ctx.lineWidth=2.5; ctx.strokeStyle='#F5A623'; ctx.stroke(); }
-  });
+  };
+  // Draw non-frontier (gray) dots first, then frontier (green) dots, so green always sits on top.
+  allRuns.forEach((run,i)=>{ if(inView(i) && !isFrontier[i]) drawDot(i); });
+  allRuns.forEach((run,i)=>{ if(inView(i) && isFrontier[i]) drawDot(i); });
 
   return canvas;
 }
