@@ -32,14 +32,16 @@
 <main>
   <p>This app helps design small individual solar plus storage systems. Its main use is for households in the tropics that have no other access to electricity and want a system big enough to meet their cooking needs in addition to lighting and other household loads.</p>
 
-  <p>One of the main insights from running this is the trade-off between cost and getting the last little bit of reliability. This is especially true outside of the tropics, but the app doesn't consider backup generators. The app is good at calculating numbers, but what a user will prefer in terms of cost versus reliability is subjective. Everyone may have a different preference. With a little flexibility regarding cooking, all of the other household energy needs can be met with 100% reliability.</p>
+  <p>One of the main insights from running this is the trade-off between cost and getting the last little bit of reliability. When the app has been given enough systems to simulate it returns a scatterplot clearly showing this trade-off.</p>
+
+  <p>The app is good at calculating numbers, but what a user will prefer in terms of cost versus reliability is subjective. Everyone may have a different preference. With a little flexibility regarding cooking, all of the other household energy needs can be met with 100% reliability.</p>
 
   <h2>Procedure</h2>
   <ol>
     <li>Click on your location on the map or type in the name of the nearest town.</li>
     <li>Check that the cost data is consistent with what is available locally.</li>
     <li>Enter your daytime and nighttime target loads. (Hint: either put in the minimum load that you want to be able to meet every day or a higher load and let the app tell you how much energy would be available on cloudy days.)</li>
-    <li>Enter many different sizes for the PV and battery. You will want to iterate, but the more sizes you put in the easier it is to understand the design trade-offs.</li>
+    <li>Enter a range of sizes to consider by entering the maximum and minimum that you think could possibly be appropriate. Err on the side of a larger range because the more sizes the app simulates the easier it is to understand the design trade-offs. Enter the interval of steps within that range. Aim for at least 10 steps.</li>
     <li>Hit the Run Simulation button</li>
     <li>Keep iterating on the System Configurations until you get a nice curve like:</li>
   </ol>
